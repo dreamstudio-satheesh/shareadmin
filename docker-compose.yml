@@ -1,0 +1,131 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./backend:/var/www/html
+    ports:
+      - "9000:9000"
+    networks:
+      - web
+    working_dir: /var/www/html
+    command: php artisan serve --host=0.0.0.0 --port=9000
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      APP_KEY: ${LARAVEL_APP_KEY}
+    depends_on:
+      - mysql
+      - redis
+
+  ticker:
+    container_name: ticker
+    build:
+      context: ./ticker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KITE_API_KEY: ${KITE_API_KEY}
+      KITE_ACCESS_TOKEN: ${KITE_ACCESS_TOKEN}
+    depends_on:
+      - redis
+    networks:
+      - web
+    command: ["python3", "tick_streamer.py"]
+
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - web
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
+    networks:
+      - web
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - web
+
+
+  # monitor_orders:
+  #   container_name: monitor_orders
+  #   build:
+  #     context: ./monitor_orders
+  #   volumes:
+  #     - ./monitor_orders:/app
+  #   env_file: .env
+  #   depends_on:
+  #     - redis
+  #     - mysql
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD", "python", "healthcheck.py"]
+  #     interval: 20s
+  #     timeout: 5s
+  #     retries: 3
+
+  # sync_positions:
+  #   container_name: sync_positions
+  #   build:
+  #     context: ./sync_positions
+  #   volumes:
+  #     - ./sync_positions:/app
+  #   env_file: .env
+  #   depends_on:
+  #     - redis
+  #     - mysql
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD", "python", "healthcheck.py"]
+  #     interval: 20s
+  #     timeout: 5s
+  #     retries: 3
+
+
+
+volumes:
+  mysql_data:
+  redis_data:
+  
+networks:
+  web:
+    driver: bridge
