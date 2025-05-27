@@ -8,24 +8,23 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('positions', function (Blueprint $table) {
+        Schema::create('watchlists', function (Blueprint $table) {
             $table->id();
+            $table->string('symbol');
+            $table->bigInteger('instrument_token');
+            $table->string('exchange'); // NSE or BSE
             $table->timestamps();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('positions');
+        Schema::dropIfExists('watchlists');
     }
 };

@@ -24,6 +24,8 @@ RUN apt-get update && apt-get install -y \
 
 RUN pecl install redis && docker-php-ext-enable redis
 
+RUN pecl install swoole && docker-php-ext-enable swoole
+
 
 # Set working directory
 WORKDIR /var/www/html
