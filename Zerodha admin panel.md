@@ -11,7 +11,7 @@ We are building a backend system called the **Zerodha Admin Panel**, designed fo
 
 **Technology Stack:**
 
-* **Backend:** Laravel 9 (PHP)
+* **Backend:** Laravel 12 (PHP)
 * **Frontend (Optional UI):** Blade with Velzon theme
 * **Database:** MySQL
 * **Live Price Caching:** Redis
@@ -50,7 +50,7 @@ We are building a backend system called the **Zerodha Admin Panel**, designed fo
 **Docker Services:**
 
 * `caddy`: Web traffic manager (HTTPS, routing)
-* `backend`: Laravel 9 app (PHP)
+* `backend`: Laravel 12 app (PHP)
 * `ticker`: Python service that fetches live prices from Zerodha and pushes to Redis
 * `monitor_orders`: Python worker that places buy/sell orders
 * `sync_positions`: Python worker to sync open positions

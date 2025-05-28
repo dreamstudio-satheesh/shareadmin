@@ -1,4 +1,4 @@
-FROM php:8.2-fpm
+FROM php:8.3-fpm
 
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
@@ -23,8 +23,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pecl install redis && docker-php-ext-enable redis
-
-RUN pecl install swoole && docker-php-ext-enable swoole
 
 
 # Set working directory
@@ -53,6 +51,10 @@ EXPOSE 9000
 
 # Start PHP-FPM
 CMD ["php-fpm"]
+
+
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
 
 # Use custom start script
 ENTRYPOINT ["start.sh"]

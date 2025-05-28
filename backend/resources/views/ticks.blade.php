@@ -1,99 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <title>Live Ticks</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @vite('resources/js/app.js')
+    <script type="module">
+        window.addEventListener('DOMContentLoaded', () => {
+            const log = document.getElementById('log');
 
+            window.Echo.channel('ticks')
+                .listen('.TickUpdate', (e) => {
+                    const { token, ltp, time } = e.tick;
+
+                    // Use token as unique ID for display row
+                    const rowId = `tick-${token}`;
+                    let row = document.getElementById(rowId);
+
+                    const content = `Token: ${token} — ₹${ltp} — ${new Date(time).toLocaleTimeString()}`;
+
+                    if (row) {
+                        row.textContent = content;
+                    } else {
+                        row = document.createElement('div');
+                        row.id = rowId;
+                        row.textContent = content;
+                        row.className = 'tick-row';
+                        log.appendChild(row);
+                    }
+                });
+        });
+    </script>
     <style>
         body {
-            font-family: sans-serif;
-            padding: 2rem;
-            background-color: #f4f6f9;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-            color: #333;
-        }
-
-        #ticks {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .tick {
+            font-family: monospace;
             padding: 1rem;
-            background-color: #fff;
-            border-left: 5px solid #22c55e;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            background: #f9f9f9;
         }
-
-        .tick strong {
-            display: inline-block;
-            width: 80px;
+        #log {
+            display: grid;
+            gap: 6px;
+        }
+        .tick-row {
+            padding: 8px;
+            background: #fff;
+            border-left: 3px solid #38bdf8;
         }
     </style>
 </head>
-
 <body>
-    <h1>📡 Live Ticks</h1>
-    <div id="ticks">Waiting for updates...</div>
-
-
-    <!-- Laravel Echo + Pusher CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pusher/8.2.0/pusher.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.11.3/dist/echo.iife.js"></script>
-
-    <script>
-        const ticksContainer = document.getElementById('ticks');
-
-        window.Pusher = Pusher; // Needed for Echo
-
-        window.Echo = new Echo({
-            broadcaster: 'pusher',
-            key: 'local', // or your REVERB_APP_KEY
-            cluster: 'mt1', // ✅ REQUIRED to avoid cluster error
-            wsHost: 'localhost',
-            wsPort: 8080,
-            wssPort: 8080,
-            forceTLS: false,
-            disableStats: true,
-            enabledTransports: ['ws'],
-        });
-
-        console.log("Echo initialized...");
-
-        window.Echo.channel('ticks')
-            .listen('App\\Events\\TickUpdated', (e) => {
-                console.log("✅ Tick received:", e);
-
-                if (ticksContainer.innerText.includes('Waiting')) {
-                    ticksContainer.innerHTML = '';
-                }
-
-                const el = document.createElement('div');
-                el.className = 'tick';
-                el.innerHTML = `
-            <strong>Token:</strong> ${e.token}<br>
-            <strong>LTP:</strong> ₹${e.data.ltp}<br>
-            <strong>Time:</strong> ${e.data.time}
-        `;
-                ticksContainer.prepend(el);
-            });
-
-        // Simulate new ticks every 3 seconds via API
-        setInterval(() => {
-            fetch('/broadcast-test')
-                .then(res => res.json())
-                .then(data => console.log("🔥 Broadcasted:", data));
-        }, 3000);
-    </script>
-
+    <h2>📈 Live Tick Dashboard</h2>
+    <div id="log"></div>
 </body>
-
 </html>

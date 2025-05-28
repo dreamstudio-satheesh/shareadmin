@@ -60,7 +60,7 @@ def get_watchlist_from_redis(redis_client):
     except Exception as e:
         print(f"ERROR reading watchlist from Redis: {e}")
         return [] # Return empty list on error
-
+HARDCODED_WATCHLIST = ["NSE:RELIANCE", "NSE:TCS", "NSE:HDFCBANK"] 
 def update_subscriptions(kws_instance, redis_client):
     """
     The main update function. It checks for instrument and watchlist changes
