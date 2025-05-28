@@ -1,19 +1,13 @@
 <?php
 
-// app/Events/TickUpdated.php
-
 namespace App\Events;
 
-
-use Illuminate\Support\Facades\Log;
+use Laravel\Reverb\Loggers\Log;
 use Illuminate\Broadcasting\Channel;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
 class TickUpdated implements ShouldBroadcast
 {
-    use SerializesModels;
-
     public $token, $data;
 
     public function __construct($token, $data)
@@ -24,13 +18,8 @@ class TickUpdated implements ShouldBroadcast
 
     public function broadcastOn()
     {
-         Log::info('Broadcasting TickUpdated on channel ticks');
-        return new Channel('ticks'); // 👈 PUBLIC CHANNEL (not PrivateChannel)
-    }
-
-    public function broadcastAs()
-    {
-        return 'TickUpdated'; // 👈 You MUST match this in JS: .listen('.TickUpdated')
+        Log::info('🔥 Broadcasting TickUpdated via: ' . config('broadcasting.default'));
+        return new Channel('ticks');
     }
 
     public function broadcastWith()
@@ -41,4 +30,3 @@ class TickUpdated implements ShouldBroadcast
         ];
     }
 }
-

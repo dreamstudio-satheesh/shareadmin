@@ -10,7 +10,7 @@
         body {
             font-family: sans-serif;
             padding: 2rem;
-            background-color: #f4f6f9;
+            background-color: #f5f7fa;
         }
 
         h1 {
@@ -44,54 +44,29 @@
     <h1>📡 Live Ticks</h1>
     <div id="ticks">Waiting for updates...</div>
 
-
-    <!-- Laravel Echo + Pusher CDN -->
+    <!-- ✅ Laravel Echo + Pusher (via CDN) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pusher/8.2.0/pusher.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.11.3/dist/echo.iife.js"></script>
 
     <script>
         const ticksContainer = document.getElementById('ticks');
 
-        window.Pusher = Pusher; // Needed for Echo
+        // ✅ Define Reverb-compatible Pusher adapter
+        window.Pusher = Pusher;
 
+        // ✅ Proper Echo init without cluster
         window.Echo = new Echo({
             broadcaster: 'pusher',
-            key: 'local', // or your REVERB_APP_KEY
-            cluster: 'mt1', // ✅ REQUIRED to avoid cluster error
+            key: 'local', // 👈 Use 'local' if REVERB_APP_KEY isn't needed
             wsHost: 'localhost',
             wsPort: 8080,
             wssPort: 8080,
             forceTLS: false,
             disableStats: true,
+            encrypted: false,
+            cluster: 'mt1', // 👈 required even for self-hosted Reverb
             enabledTransports: ['ws'],
         });
-
-        console.log("Echo initialized...");
-
-        window.Echo.channel('ticks')
-            .listen('App\\Events\\TickUpdated', (e) => {
-                console.log("✅ Tick received:", e);
-
-                if (ticksContainer.innerText.includes('Waiting')) {
-                    ticksContainer.innerHTML = '';
-                }
-
-                const el = document.createElement('div');
-                el.className = 'tick';
-                el.innerHTML = `
-            <strong>Token:</strong> ${e.token}<br>
-            <strong>LTP:</strong> ₹${e.data.ltp}<br>
-            <strong>Time:</strong> ${e.data.time}
-        `;
-                ticksContainer.prepend(el);
-            });
-
-        // Simulate new ticks every 3 seconds via API
-        setInterval(() => {
-            fetch('/broadcast-test')
-                .then(res => res.json())
-                .then(data => console.log("🔥 Broadcasted:", data));
-        }, 3000);
     </script>
 
 </body>
