@@ -53,3 +53,9 @@ EXPOSE 9000
 
 # Start PHP-FPM
 CMD ["php-fpm"]
+
+# Use custom start script
+ENTRYPOINT ["start.sh"]
+
+# RUN apt-get update && apt-get install -y supervisor
+# COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
