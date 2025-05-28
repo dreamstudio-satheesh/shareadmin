@@ -2,6 +2,7 @@
 @section('title', 'Watchlist Manager')
 
 @section('content')
+
 <div class="row">
     <div class="col-12">
         <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
@@ -16,12 +17,7 @@
     </div>
 </div>
 
-@if(session('success'))
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    {{ session('success') }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-@endif
+@include('partials.alerts')
 
 <div class="row">
     <div class="col-lg-6">

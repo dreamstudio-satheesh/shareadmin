@@ -1,163 +1,131 @@
 import os
-import io
-import csv
 import json
-import time
 import redis
-import requests
-from datetime import datetime, timedelta
+import mysql.connector
+from datetime import datetime
 from kiteconnect import KiteTicker
+import threading
+import time
+import logging
+
+# --- Logging Setup ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- Configuration ---
 API_KEY = os.getenv("KITE_API_KEY")
 ACCESS_TOKEN = os.getenv("KITE_ACCESS_TOKEN")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_WATCHLIST_KEY = "watchlist:symbols" # The Redis key Laravel will write to
-CACHE_DIR = "instrument_cache"
+REDIS_WATCHLIST_KEY = "watchlist:symbols"
 
-FETCH_INTERVAL_HOURS = 24
-WATCHLIST_CHECK_SECONDS = 15 # Check for watchlist changes every 15 seconds
-
-# --- Initial Checks & Setup ---
-if not API_KEY or not ACCESS_TOKEN:
-    raise ValueError("Please set KITE_API_KEY and KITE_ACCESS_TOKEN environment variables.")
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
+MYSQL_CONFIG = {
+    'host': os.getenv("DB_HOST", "localhost"),
+    'user': os.getenv("DB_USERNAME", "root"),
+    'password': os.getenv("DB_PASSWORD", ""),
+    'database': os.getenv("DB_DATABASE", "zerodha"),
+}
 
 # --- Global State ---
 token_to_symbol_map = {}
+symbol_to_token_map = {}
 subscribed_tokens = set()
-last_fetch_time = None
-# No longer a hardcoded WATCHLIST variable
 
-# --- Functions ---
-
-def get_instruments_with_caching():
-    # ... (This function remains unchanged from the previous version) ...
-    today_str = datetime.now().strftime('%Y-%m-%d')
-    filename = os.path.join(CACHE_DIR, f"instruments_{today_str}.csv")
-    if os.path.exists(filename):
-        with open(filename, 'r', newline='') as f:
-            return list(csv.DictReader(f))
-    print("Fetching from Kite API...")
+# --- Load Instruments ---
+def load_instruments():
     try:
-        response = requests.get("https://api.kite.trade/instruments", timeout=15)
-        response.raise_for_status()
-        with open(filename, 'w', newline='') as f:
-            f.write(response.text)
-        return list(csv.DictReader(io.StringIO(response.text)))
-    except requests.RequestException as e:
-        print(f"ERROR fetching instruments from API: {e}")
-        return None
+        conn = mysql.connector.connect(**MYSQL_CONFIG)
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT instrument_token, exchange, tradingsymbol FROM instruments")
+        instruments = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {
+            int(inst['instrument_token']): f"{inst['exchange']}:{inst['tradingsymbol']}"
+            for inst in instruments
+        }
+    except mysql.connector.Error as e:
+        logging.error(f"MySQL error: {e}")
+        return {}
 
-def get_watchlist_from_redis(redis_client):
-    """Fetches the current watchlist from the Redis SET."""
-    try:
-        # SMEMBERS returns all members of the set. Returns a set of strings.
-        watchlist = redis_client.smembers(REDIS_WATCHLIST_KEY)
-        return list(watchlist) # Convert to list for processing
-    except Exception as e:
-        print(f"ERROR reading watchlist from Redis: {e}")
-        return [] # Return empty list on error
-HARDCODED_WATCHLIST = ["NSE:RELIANCE", "NSE:TCS", "NSE:HDFCBANK"] 
-def update_subscriptions(kws_instance, redis_client):
-    """
-    The main update function. It checks for instrument and watchlist changes
-    and updates WebSocket subscriptions accordingly.
-    """
-    global token_to_symbol_map, subscribed_tokens, last_fetch_time
-
-    # --- Step 1: Handle Daily Instrument Fetch ---
-    # Check if it's time for the daily instrument refresh
-    if last_fetch_time is None or (datetime.now() - last_fetch_time > timedelta(hours=FETCH_INTERVAL_HOURS)):
-        print("--- Running daily instrument update ---")
-        all_instruments = get_instruments_with_caching()
-        if all_instruments:
-            new_token_map = {}
-            for inst in all_instruments:
-                key = f"{inst['exchange']}:{inst['tradingsymbol']}"
-                new_token_map[int(inst['instrument_token'])] = key
-            token_to_symbol_map = new_token_map # Update global map
-            print("Instrument map updated.")
-        else:
-            print("Could not update instrument map, using existing one.")
-        last_fetch_time = datetime.now()
-
-    # --- Step 2: Get Latest Watchlist from Redis ---
-    current_watchlist = get_watchlist_from_redis(redis_client)
-    if not token_to_symbol_map:
-        print("WARN: Instrument map is not loaded. Cannot process watchlist.")
-        return
-
-    # Invert map to get tokens for symbols
-    symbol_to_token_map = {v: k for k, v in token_to_symbol_map.items()}
-    
-    # --- Step 3: Calculate and Apply Subscription Changes ---
-    new_tokens_to_subscribe = {symbol_to_token_map.get(s.upper()) for s in current_watchlist if symbol_to_token_map.get(s.upper())}
-
-    # Only proceed if there's a change
-    if new_tokens_to_subscribe == subscribed_tokens:
-        return # No change, do nothing
-
-    print(f"Watchlist change detected. New count: {len(new_tokens_to_subscribe)}, Old count: {len(subscribed_tokens)}")
-
-    if kws_instance and kws_instance.is_connected():
-        tokens_to_add = list(new_tokens_to_subscribe - subscribed_tokens)
-        tokens_to_remove = list(subscribed_tokens - new_tokens_to_subscribe)
-        
-        if tokens_to_add:
-            print(f"Subscribing to: {tokens_to_add}")
-            kws_instance.subscribe(tokens_to_add)
-            kws_instance.set_mode(kws_instance.MODE_FULL, tokens_to_add)
-        if tokens_to_remove:
-            print(f"Unsubscribing from: {tokens_to_remove}")
-            kws_instance.unsubscribe(tokens_to_remove)
-
-    subscribed_tokens = new_tokens_to_subscribe
-    print(f"Subscription update complete. Now subscribed to {len(subscribed_tokens)} tokens.")
-
-
-# --- WebSocket Callbacks (No changes needed) ---
-def on_ticks(ws, ticks):
-    # ... same as before ...
-    for tick in ticks:
-        token = tick['instrument_token']
-        symbol = token_to_symbol_map.get(token, "UNKNOWN")
-        data = {"instrument_token": token, "symbol": symbol, "last_price": tick.get('last_price'), "timestamp": tick.get('exchange_timestamp', time.time())}
-        r.publish('kite_ticks', json.dumps(data))
-
-def on_connect(ws, response):
-    # ... same as before ...
-    print("WebSocket Connected. Running initial subscription check...")
-    # The main loop will handle the first subscription
-    
-def on_close(ws, code, reason):
-    # ... same as before ...
-    print(f"WebSocket Closed: {code} - {reason}")
-
-# --- Main Execution ---
-r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
-kws = KiteTicker(API_KEY, ACCESS_TOKEN)
-kws.on_ticks = on_ticks
-kws.on_connect = on_connect
-kws.on_close = on_close
-
-try:
-    # Run an initial update to load instruments before connecting
-    update_subscriptions(kws_instance=None, redis_client=r)
-    
-    print("Starting WebSocket connection...")
-    kws.connect(threaded=True)
-    time.sleep(5) # Wait for connection to establish
-
-    # Main loop to periodically check for watchlist changes
+# --- Redis Sync Thread ---
+def sync_watchlist():
+    global subscribed_tokens
     while True:
-        update_subscriptions(kws, r)
-        time.sleep(WATCHLIST_CHECK_SECONDS)
+        try:
+            current_watchlist = {s.decode('utf-8') for s in r.smembers(REDIS_WATCHLIST_KEY)}
+            target_tokens = {
+                symbol_to_token_map[s] for s in current_watchlist if s in symbol_to_token_map
+            }
 
-except KeyboardInterrupt:
-    print("Shutting down.")
-finally:
-    if kws and kws.is_connected():
-        kws.close()
+            if target_tokens != subscribed_tokens:
+                to_add = list(target_tokens - subscribed_tokens)
+                to_remove = list(subscribed_tokens - target_tokens)
+
+                if to_add:
+                    kws.subscribe(to_add)
+                    kws.set_mode(kws.MODE_FULL, to_add)
+                    logging.info(f"Subscribed to: {to_add}")
+
+                if to_remove:
+                    kws.unsubscribe(to_remove)
+                    logging.info(f"Unsubscribed from: {to_remove}")
+
+                subscribed_tokens = target_tokens
+            time.sleep(0.5)
+        except Exception as e:
+            logging.error(f"Watchlist sync failed: {e}")
+            time.sleep(2)
+
+# --- Ticks Processing ---
+def on_ticks(ws, ticks):
+    try:
+        pipe = r.pipeline()
+        for tick in ticks:
+            token = tick['instrument_token']
+            symbol = token_to_symbol_map.get(token, "UNKNOWN")
+            data = {
+                'lp': str(tick.get('last_price', 0.0)),
+                'ts': str(int(tick.get('exchange_timestamp', datetime.now()).timestamp()))
+            }
+            pipe.hset(f"tick:{token}", mapping=data)
+        pipe.execute()
+    except Exception as e:
+        logging.error(f"Tick processing error: {e}")
+
+# --- Lifecycle Hooks ---
+def on_connect(ws, response):
+    logging.info("Connected to WebSocket")
+    try:
+        current_watchlist = {s.decode('utf-8') for s in r.smembers(REDIS_WATCHLIST_KEY)}
+        initial_tokens = {
+            symbol_to_token_map[s] for s in current_watchlist if s in symbol_to_token_map
+        }
+        if initial_tokens:
+            ws.subscribe(list(initial_tokens))
+            ws.set_mode(ws.MODE_FULL, list(initial_tokens))
+            global subscribed_tokens
+            subscribed_tokens = initial_tokens
+            logging.info(f"Initial tokens subscribed: {list(initial_tokens)}")
+    except Exception as e:
+        logging.error(f"Initial subscription failed: {e}")
+
+def on_close(ws, code, reason):
+    logging.warning(f"WebSocket closed: {code}, Reason: {reason}")
+
+# --- Main ---
+if __name__ == "__main__":
+    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
+    token_to_symbol_map = load_instruments()
+    symbol_to_token_map = {v: k for k, v in token_to_symbol_map.items()}
+
+    if not token_to_symbol_map:
+        logging.critical("Failed to load instruments. Exiting.")
+        exit()
+
+    kws = KiteTicker(API_KEY, ACCESS_TOKEN)
+    kws.on_ticks = on_ticks
+    kws.on_connect = on_connect
+    kws.on_close = on_close
+
+    threading.Thread(target=sync_watchlist, daemon=True).start()
+    kws.connect(threaded=True)

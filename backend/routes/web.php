@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\WatchlistController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ZerodhaAuthController;
 use App\Http\Controllers\ZerodhaAccountController;
@@ -19,13 +20,18 @@ Route::post('zerodha_accounts/{zerodha_account}/update-token', [ZerodhaAccountCo
 Route::middleware('admin.auth')->group(function () {
     Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
     Route::resource('zerodha_accounts', ZerodhaAccountController::class);
-    
+
     Route::post('zerodha_accounts/check-now', [ZerodhaAccountController::class, 'checkNow'])->name('zerodha_accounts.check_now');
-    
+
     Route::prefix('zerodha')->group(function () {
         Route::get('/login/{id}', [ZerodhaAuthController::class, 'redirect'])->name('zerodha.login');
         Route::get('/callback', [ZerodhaAuthController::class, 'callback'])->name('zerodha.callback');
     });
+
+    Route::get('/watchlist', [WatchlistController::class, 'index']);
+    Route::post('/watchlist/add', [WatchlistController::class, 'add']);
+    Route::post('/watchlist/remove', [WatchlistController::class, 'remove']);
+    Route::post('/watchlist/clear', [WatchlistController::class, 'clear']);
 });
 
 
