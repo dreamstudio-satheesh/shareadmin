@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WatchlistController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\InstrumentsController;
 use App\Http\Controllers\ZerodhaAuthController;
+use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\ZerodhaAccountController;
 
 Route::get('/', function () {
@@ -28,10 +30,18 @@ Route::middleware('admin.auth')->group(function () {
         Route::get('/callback', [ZerodhaAuthController::class, 'callback'])->name('zerodha.callback');
     });
 
+    Route::get('/settings', [AdminSettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+
     Route::get('/watchlist', [WatchlistController::class, 'index']);
     Route::post('/watchlist/add', [WatchlistController::class, 'add']);
     Route::post('/watchlist/remove', [WatchlistController::class, 'remove']);
     Route::post('/watchlist/clear', [WatchlistController::class, 'clear']);
+
+
+
+    Route::get('/instruments', [InstrumentsController::class, 'index'])->name('instruments.index');
+    Route::post('/instruments/import', [InstrumentsController::class, 'import'])->name('instruments.import');
 });
 
 

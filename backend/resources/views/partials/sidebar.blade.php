@@ -16,21 +16,47 @@
             <div id="two-column-menu"></div>
             <ul class="navbar-nav" id="navbar-nav">
                 <li class="menu-title"><span>Menu</span></li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('dashboard') }}">
                         <i class="mdi mdi-home-outline"></i>
                         <span>Dashboard</span>
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('instruments.index') }}">
+                        <i class="mdi mdi-database-import"></i>
+                        <span>Instruments</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url('watchlist') }}">
+                        <i class="mdi mdi-eye-outline"></i>
+                        <span>Watchlist</span>
+                    </a>
+                </li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="#">
-                        <i class="mdi mdi-upload"></i>
+                        <i class="mdi mdi-file-upload-outline"></i>
                         <span>Upload Orders</span>
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('settings.edit') }}">
+                        <i class="mdi mdi-cog-outline"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+
             </ul>
         </div>
     </div>
 
     <div class="sidebar-background"></div>
 </div>
+
+<!-- End Sidebar -->

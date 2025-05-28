@@ -39,7 +39,7 @@ class ImportInstruments extends Command
                     'tradingsymbol' => $data['tradingsymbol'],
                     'name' => $data['name'] ?? null,
                     'last_price' => $data['last_price'] ?? 0,
-                    'expiry' => $data['expiry'] ?? null,
+                    'expiry' => (!empty($data['expiry']) && $data['expiry'] !== '0000-00-00') ? $data['expiry'] : null,
                     'strike' => $data['strike'] ?? 0,
                     'tick_size' => $data['tick_size'] ?? 0,
                     'lot_size' => $data['lot_size'] ?? 0,
