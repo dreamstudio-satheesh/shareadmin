@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
 class ZerodhaApiService
@@ -92,10 +93,24 @@ class ZerodhaApiService
     }
 
     // 🔹 Get LTP
-    public function getLTP(array $instruments) // e.g. ['NSE:INFY', 'BSE:RELIANCE']
+    public function getLTP(array $instruments)
     {
-        $query = http_build_query(['i' => $instruments]);
-        return $this->request()->get("https://api.kite.trade/quote/ltp?$query")->json();
+        $query = implode('&', array_map(fn($i) => 'i=' . urlencode($i), $instruments));
+
+        $response = $this->request()->get("https://api.kite.trade/quote/ltp?$query");
+
+        if ($response->failed()) {
+            Log::error("getLTP failed: " . $response->body());
+            throw new \Exception("LTP API request failed");
+        }
+
+        $json = $response->json();
+
+        if (!isset($json['data']) || empty($json['data'])) {
+            Log::warning("getLTP returned empty data for: " . implode(', ', $instruments));
+        }
+
+        return $json;
     }
 
 

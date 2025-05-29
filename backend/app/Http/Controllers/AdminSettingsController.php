@@ -13,6 +13,13 @@ class AdminSettingsController extends Controller
         return view('settings.edit', compact('settings'));
     }
 
+    /**
+     * Update admin settings.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+
     public function update(Request $request)
     {
         $request->validate([
@@ -23,9 +30,24 @@ class AdminSettingsController extends Controller
         ]);
 
         DB::table('admin_settings')->update($request->only([
-            'buy_logic', 'buy_percent', 'stoploss_percent', 'auto_sell_time',
+            'buy_logic',
+            'buy_percent',
+            'stoploss_percent',
+            'auto_sell_time',
         ]) + ['updated_at' => now()]);
 
         return back()->with('success', 'Settings updated.');
+    }
+
+    public function logs()
+    {
+        $logs = \App\Models\OrderLog::latest()->paginate(50);
+        return view('orders.logs', compact('logs'));
+    }
+
+    public function cronLogs()
+    {
+        $logs = \App\Models\CronLog::latest()->paginate(50);
+        return view('logs.cron', compact('logs'));
     }
 }

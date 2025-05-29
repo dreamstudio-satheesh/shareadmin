@@ -53,11 +53,33 @@
                 </li>
 
                 <li class="nav-item">
+                    <a class="nav-link" href="{{ route('orders.index') }}">
+                        <i class="mdi mdi-file-document-outline"></i>
+                        <span>Orders</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
                     <a class="nav-link" href="{{ route('settings.edit') }}">
                         <i class="mdi mdi-cog-outline"></i>
                         <span>Settings</span>
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('cron.logs') }}">
+                        <i class="mdi mdi-clock-outline"></i>
+                        <span>Cron Logs</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('orders.logs') }}">
+                        <i class="mdi mdi-file-document-outline"></i>
+                        <span>Order Logs</span>
+                    </a>
+                </li>   
+
 
             </ul>
         </div>

@@ -12,7 +12,7 @@ import pytz
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Configuration from ENV or Defaults ---
+# --- ENV Configuration ---
 API_KEY = os.getenv("KITE_API_KEY")
 ACCESS_TOKEN = os.getenv("KITE_ACCESS_TOKEN")
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -30,6 +30,11 @@ MYSQL_CONFIG = {
 token_to_symbol_map = {}
 symbol_to_token_map = {}
 subscribed_tokens = set()
+
+# --- Check Market Hours (India) ---
+def is_market_open():
+    now = datetime.now(pytz.timezone("Asia/Kolkata"))
+    return now.weekday() < 5 and "09:15" <= now.strftime('%H:%M') <= "15:30"
 
 # --- Load Instruments from MySQL ---
 def load_instruments():
@@ -51,20 +56,19 @@ def load_instruments():
         logging.error(f"MySQL error: {e}")
         return {}
 
-# --- Check Market Hours (India) ---
-def is_market_open():
-    now = datetime.now(pytz.timezone("Asia/Kolkata"))
-    return now.weekday() < 5 and "09:15" <= now.strftime('%H:%M') <= "15:30"
-
 # --- Redis Watchlist Sync Thread ---
 def sync_watchlist():
     global subscribed_tokens
     while True:
         try:
+            if not is_market_open():
+                logging.info("⏸ Market is closed — skipping sync_watchlist cycle")
+                time.sleep(30)
+                continue
+
             current_watchlist = {s.decode('utf-8') for s in r.smembers(REDIS_WATCHLIST_KEY)}
             logging.info(f"[Watchlist] Current: {current_watchlist}")
 
-            # Convert symbols to tokens
             target_tokens = {
                 symbol_to_token_map[symbol] for symbol in current_watchlist if symbol in symbol_to_token_map
             }
@@ -84,10 +88,10 @@ def sync_watchlist():
 
                 subscribed_tokens = target_tokens
 
-            time.sleep(1)
+            time.sleep(3)
         except Exception as e:
             logging.error(f"[Sync Error] {e}")
-            time.sleep(2)
+            time.sleep(5)
 
 # --- Tick Handler ---
 def on_ticks(ws, ticks):
@@ -101,25 +105,22 @@ def on_ticks(ws, ticks):
 
             tick_data = {
                 'lp': str(tick.get('last_price', 0.0)),
-                'ts': str(int(tick.get('exchange_timestamp', datetime.now()).timestamp()))
+                'ts': str(int(tick.get('exchange_timestamp', datetime.now()).timestamp())),
+                'market_open': str(is_market_open())
             }
 
-            # Fix Redis key type mismatch
             if r.type(key) != b'hash':
                 r.delete(key)
 
-            # Save tick to Redis hash
             pipe.hset(key, mapping=tick_data)
-
-            # Publish to Redis channel (for Laravel Reverb or other subscribers)
-            r.publish("ticks", json.dumps({
+            pipe.expire(key, 172800)  # 2-day expiry
+            pipe.publish("ticks", json.dumps({
                 "token": token,
                 "symbol": symbol,
                 **tick_data
             }))
 
             logging.info(f"[Tick] {symbol} => {tick_data}")
-
         pipe.execute()
     except Exception as e:
         logging.error(f"[Tick Error] {e}")
@@ -127,6 +128,10 @@ def on_ticks(ws, ticks):
 # --- WebSocket Events ---
 def on_connect(ws, response):
     logging.info("✔ WebSocket connected")
+
+    if not is_market_open():
+        logging.warning("⏸ Market is closed — skipping subscription")
+        return
 
     try:
         current_watchlist = {s.decode('utf-8') for s in r.smembers(REDIS_WATCHLIST_KEY)}
@@ -148,14 +153,11 @@ def on_close(ws, code, reason):
 
 # --- Main Entry ---
 if __name__ == "__main__":
-    # Connect to Redis
     r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT)
 
-    # Load instruments from DB
     token_to_symbol_map = load_instruments()
     symbol_to_token_map = {v: k for k, v in token_to_symbol_map.items()}
 
-    # Validate symbol map
     for test_symbol in ["NSE:TCS", "NSE:HDFCBANK", "NSE:IDEA"]:
         if test_symbol in symbol_to_token_map:
             logging.info(f"✔ Found in instrument map: {test_symbol}")
@@ -166,21 +168,15 @@ if __name__ == "__main__":
         logging.critical("❌ Failed to load instruments. Exiting.")
         exit(1)
 
-    # Check market status
     logging.info(f"📅 Market open: {is_market_open()}")
 
-    # Create KiteTicker instance
     kws = KiteTicker(API_KEY, ACCESS_TOKEN)
     kws.on_ticks = on_ticks
     kws.on_connect = on_connect
     kws.on_close = on_close
 
-    # Start watchlist syncing in background
     threading.Thread(target=sync_watchlist, daemon=True).start()
-
-    # Start WebSocket (non-blocking)
     kws.connect(threaded=True)
 
-    # Keep main thread alive
     while True:
         time.sleep(1)

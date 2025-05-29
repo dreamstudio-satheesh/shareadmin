@@ -3,82 +3,90 @@
 namespace App\Imports;
 
 use App\Models\PendingOrder;
-use App\Models\Instrument;
+use App\Models\ZerodhaAccount;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
-use Illuminate\Support\Facades\Redis;
+use App\Services\ZerodhaApiService;
+use App\Traits\TradeHelpers;
 
 class PendingOrdersImport implements ToCollection
 {
+    use TradeHelpers;
+
     protected $accountId;
+    protected ZerodhaApiService $api;
 
     public function __construct($accountId)
     {
         $this->accountId = $accountId;
+
+        $account = ZerodhaAccount::whereNotNull('access_token')->first();
+
+        if (! $account) {
+            throw new \Exception('No Zerodha account with access token found for API fallback.');
+        }
+
+        $this->api = new ZerodhaApiService($account->api_key, $account->api_secret, $account->access_token);
     }
 
     public function collection(Collection $rows)
     {
-        $rows->shift(); // Skip header row
+        $rows->shift(); // skip header
 
-        foreach ($rows as $row) {
-            $symbol = trim($row[0]);
-            $targetPercent = floatval($row[1]);
-            $qty = floatval($row[2]);
-            $product = strtoupper(trim($row[3]));
+        foreach ($rows as $index => $row) {
+            try {
+                $symbolInput = trim($row[0] ?? '');
+                $targetPercent = floatval($row[1] ?? 0);
+                $qty = floatval($row[2] ?? 0);
+                $product = strtoupper(trim($row[3] ?? ''));
 
-            // Skip duplicate pending order
-            if (PendingOrder::where('zerodha_account_id', $this->accountId)
-                ->where('symbol', $symbol)
-                ->where('status', 'pending')
-                ->exists()) {
-                continue;
-            }
-
-            // Get token
-            $token = getTokenFromSymbol($symbol); // your helper function
-            if (!$token) continue;
-
-            $ltp = null;
-            $source = null;
-
-            if (isMarketOpen()) {
-                // Try Redis tick
-                $tick = Redis::get("tick:$token");
-                $tickData = $tick ? json_decode($tick, true) : null;
-
-                if ($tickData && isset($tickData['ltp'])) {
-                    $ltp = floatval($tickData['ltp']);
-                    $source = 'redis';
+                if (!$symbolInput || $qty <= 0 || !in_array($product, ['MIS', 'CNC'])) {
+                    Log::warning("Row $index: Invalid or missing data.");
+                    continue;
                 }
-            }
 
-            // Fallback to instrument table
-            if (!$ltp) {
-                $instrument = Instrument::where('instrument_token', $token)->first();
-                if ($instrument && $instrument->last_price > 0) {
-                    $ltp = floatval($instrument->last_price);
-                    $source = 'instrument';
+                [$exchange, $symbol] = $this->parseSymbol($symbolInput);
+                $fullSymbol = "$exchange:$symbol";
+
+                if (PendingOrder::where('zerodha_account_id', $this->accountId)
+                    ->where('symbol', $fullSymbol)
+                    ->where('status', 'pending')
+                    ->exists()) {
+                    Log::info("Row $index: Duplicate order for $fullSymbol, skipped.");
+                    continue;
                 }
+
+                $token = getTokenFromSymbol($fullSymbol);
+                if (!$token) {
+                    Log::warning("Row $index: Token not found for $fullSymbol.");
+                    continue;
+                }
+
+                [$ltp, $source] = $this->fetchLTP($exchange, $symbol, $token, $fullSymbol, $this->api, $index);
+                if (!$ltp) continue;
+
+                $tickSize = $this->getTickSize($exchange, $symbol);
+                $targetPrice = $this->snapToTick($ltp + ($ltp * $targetPercent / 100), $tickSize, true);
+                $stoplossPrice = $this->snapToTick($ltp - ($ltp * getStoplossPercent() / 100), $tickSize, false);
+
+                PendingOrder::create([
+                    'zerodha_account_id' => $this->accountId,
+                    'symbol' => $fullSymbol,
+                    'qty' => $qty,
+                    'target_percent' => $targetPercent,
+                    'ltp_at_upload' => $ltp,
+                    'target_price' => $targetPrice,
+                    'stoploss_price' => $stoplossPrice,
+                    'product' => $product,
+                    'ltp_source' => $source,
+                ]);
+
+                Log::info("Row $index: Imported $fullSymbol with LTP $ltp from $source.");
+
+            } catch (\Throwable $e) {
+                Log::error("Row $index: Failed for symbol '" . ($row[0] ?? '') . "'. Error: " . $e->getMessage());
             }
-
-            if (!$ltp) continue;
-
-            $targetPrice = round($ltp + ($ltp * $targetPercent / 100), 2);
-            $stoplossPercent = getStoplossPercent(); // your config helper
-            $stoplossPrice = round($ltp - ($ltp * $stoplossPercent / 100), 2);
-
-            PendingOrder::create([
-                'zerodha_account_id' => $this->accountId,
-                'symbol' => $symbol,
-                'qty' => $qty,
-                'target_percent' => $targetPercent,
-                'ltp_at_upload' => $ltp,
-                'target_price' => $targetPrice,
-                'stoploss_price' => $stoplossPrice,
-                'product' => $product,
-                'ltp_source' => $source, // Optional: add this column in DB if you want
-            ]);
         }
     }
 }
