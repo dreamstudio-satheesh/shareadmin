@@ -11,4 +11,4 @@ php artisan ticks:broadcast &
 php artisan queue:work --tries=3 &
 
 # Start Reverb WebSocket server in foreground (blocking)
-php artisan reverb:start --debug
+php artisan reverb:start # --debug

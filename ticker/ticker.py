@@ -97,13 +97,27 @@ def on_ticks(ws, ticks):
         for tick in ticks:
             token = tick['instrument_token']
             symbol = token_to_symbol_map.get(token, "UNKNOWN")
+            key = f"tick:{token}"
 
             tick_data = {
                 'lp': str(tick.get('last_price', 0.0)),
                 'ts': str(int(tick.get('exchange_timestamp', datetime.now()).timestamp()))
             }
 
-            pipe.hset(f"tick:{token}", mapping=tick_data)
+            # Fix Redis key type mismatch
+            if r.type(key) != b'hash':
+                r.delete(key)
+
+            # Save tick to Redis hash
+            pipe.hset(key, mapping=tick_data)
+
+            # Publish to Redis channel (for Laravel Reverb or other subscribers)
+            r.publish("ticks", json.dumps({
+                "token": token,
+                "symbol": symbol,
+                **tick_data
+            }))
+
             logging.info(f"[Tick] {symbol} => {tick_data}")
 
         pipe.execute()

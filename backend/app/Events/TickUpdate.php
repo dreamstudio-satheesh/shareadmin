@@ -1,26 +1,28 @@
 <?php
 
-// app/Events/TickUpdate.php
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Queue\SerializesModels;
 
 class TickUpdate implements ShouldBroadcastNow
 {
-    public $tick;
+    use SerializesModels;
+
+    public array $tick;
 
     public function __construct(array $tick)
     {
         $this->tick = $tick;
     }
 
-    public function broadcastOn()
+    public function broadcastOn(): Channel
     {
         return new Channel('ticks');
     }
 
-    public function broadcastAs()
+    public function broadcastAs(): string
     {
         return 'TickUpdate';
     }

@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrdersController;
 use App\Http\Controllers\WatchlistController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\InstrumentsController;
@@ -43,7 +44,7 @@ Route::middleware('admin.auth')->group(function () {
     Route::post('/orders/import', [OrderController::class, 'import'])->name('orders.import');
     Route::get('/orders/sample', [OrderController::class, 'downloadSample'])->name('orders.download.sample');
 
-
+    Route::get('/orders', [OrdersController::class, 'index'])->name('orders.index');
 
     Route::get('/instruments', [InstrumentsController::class, 'index'])->name('instruments.index');
     Route::post('/instruments/import', [InstrumentsController::class, 'import'])->name('instruments.import');
