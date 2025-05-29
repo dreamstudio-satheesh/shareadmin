@@ -3,13 +3,6 @@
 
 @section('content')
 
-    @php
-        function symbolToId($symbol)
-        {
-            return str_replace(':', '_', $symbol);
-        }
-    @endphp
-
     <div class="row">
         <div class="col-12">
             <div class="page-title-box d-sm-flex align-items-center justify-content-between bg-galaxy-transparent">
@@ -42,28 +35,28 @@
                             </tr>
                         </thead>
                         <tbody id="watchlist">
-                            @foreach ($symbols as $symbol)
-                                @php $id = str_replace(':', '_', $symbol); @endphp
+                            @forelse ($symbols as $symbol)
+                                @php
+                                    $id = str_replace(':', '_', $symbol);
+                                    $tick = $tickData->get($symbol);
+                                @endphp
                                 <tr id="tick-{{ $id }}">
                                     <td class="fw-medium">{{ $symbol }}</td>
-                                    @php
-                                        $symbolParts = explode(':', $symbol);
-                                        $exchange = count($symbolParts) > 1 ? $symbolParts[0] : 'NSE';
-
-                                        $symbolName = count($symbolParts) > 1 ? $symbolParts[1] : $symbolParts[0];
-                                    @endphp
                                     <td class="text-center">
-                                        <span id="ltp-{{ $id }}" class="badge bg-info fw-medium px-2 py-1"
-                                            style="font-size: 0.75rem;">--</span>
-                                        <span id="change-{{ $id }}" class="ms-2 fw-semibold"
-                                            style="font-size: 0.65rem;">--%</span>
+                                        <span id="ltp-{{ $id }}" class="badge bg-info fw-medium px-2 py-1" style="font-size: 0.75rem;">
+                                            {{ $tick['ltp'] ?? '--' }}
+                                        </span>
+                                        <span id="change-{{ $id }}" class="ms-2 fw-semibold" style="font-size: 0.65rem;">--%</span>
                                         <i id="arrow-{{ $id }}" class="bx bx-minus text-muted fs-5 ms-2"></i>
+                                        @if ($tick && isset($tick['last_update']))
+                                            <div class="text-muted small mt-1">
+                                                {{ $tick['market_open'] ? 'Live' : 'Last updated ' . $tick['last_update'] }}
+                                            </div>
+                                        @endif
                                     </td>
-
                                     <td class="text-center">
                                         <canvas id="spark-{{ $id }}" height="35" width="120"></canvas>
                                     </td>
-
                                     <td class="text-end">
                                         <form method="POST" action="{{ url('/watchlist/remove') }}" class="d-inline">
                                             @csrf
@@ -72,15 +65,12 @@
                                         </form>
                                     </td>
                                 </tr>
-                            @endforeach
-
-                            @if (empty($symbols))
+                            @empty
                                 <tr>
                                     <td colspan="4" class="text-center text-muted">No symbols in Redis</td>
                                 </tr>
-                            @endif
+                            @endforelse
                         </tbody>
-
                     </table>
 
                     <form method="POST" action="{{ url('/watchlist/clear') }}" class="mt-3 text-end">
@@ -88,7 +78,6 @@
                         <button class="btn btn-outline-primary btn-sm px-4 py-1">Clear All</button>
                     </form>
                 </div>
-
             </div>
         </div>
 
@@ -117,7 +106,6 @@
 @endsection
 
 @push('styles')
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
 @endpush
@@ -135,8 +123,7 @@
                 .listen('.TickUpdate', (e) => {
                     let tick;
                     try {
-                        tick = e?.tick ?? (typeof e?.data === 'string' ? JSON.parse(e.data).tick : e.data
-                            ?.tick);
+                        tick = e?.tick ?? (typeof e?.data === 'string' ? JSON.parse(e.data).tick : e.data?.tick);
                     } catch (err) {
                         console.error('[Watchlist] Tick parse error:', err, e);
                         return;
@@ -153,7 +140,6 @@
 
                     if (!ltpEl || !arrowEl || !canvas) return;
 
-                    // Price text and arrow
                     ltpEl.textContent = current.toFixed(2);
 
                     const prev = previousPrices[id];
@@ -184,11 +170,9 @@
                     if (!sparkData[id]) {
                         sparkData[id] = [];
                     }
-
                     if (sparkData[id].length > 20) {
                         sparkData[id].shift();
                     }
-
                     sparkData[id].push(current);
 
                     if (!sparkCharts[id]) {
@@ -209,20 +193,12 @@
                                 animation: false,
                                 responsive: false,
                                 scales: {
-                                    x: {
-                                        display: false
-                                    },
-                                    y: {
-                                        display: false
-                                    }
+                                    x: { display: false },
+                                    y: { display: false }
                                 },
                                 plugins: {
-                                    legend: {
-                                        display: false
-                                    },
-                                    tooltip: {
-                                        enabled: false
-                                    }
+                                    legend: { display: false },
+                                    tooltip: { enabled: false }
                                 }
                             }
                         });

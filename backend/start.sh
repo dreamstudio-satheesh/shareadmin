@@ -12,3 +12,11 @@ php artisan queue:work --tries=3 &
 
 # Start Reverb WebSocket server in foreground (blocking)
 php artisan reverb:start # --debug
+
+
+# [program:cron]
+# command=cron -f
+# autostart=true
+# autorestart=true
+# stdout_logfile=/dev/stdout
+# stderr_logfile=/dev/stderr

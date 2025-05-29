@@ -3,6 +3,7 @@
 use App\Models\Instrument;
 use App\Models\AdminSetting;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Get token for a given symbol (must include exchange prefix if needed).
@@ -36,6 +37,39 @@ function isMarketOpen(): bool
     $end = $now->copy()->setTime(15, 30);
 
     return $now->isWeekday() && $now->between($start, $end);
+}
+
+
+/**
+ * Check if today is a trading day (weekday and not in holiday list).
+ */
+function isTradingDay(?Carbon $date = null): bool
+{
+    $date = $date?->copy() ?? now()->timezone('Asia/Kolkata')->startOfDay();
+
+    if (! $date->isWeekday()) {
+        return false;
+    }
+
+    // Cache holiday list for 1 hour to reduce DB/API hits
+    $holidays = Cache::remember('nse_holidays', 3600, function () {
+        // Option A: Static list
+        return [
+            '2025-01-26',
+            '2025-03-29',
+            '2025-04-14',
+            '2025-05-30',
+            '2025-08-15',
+            '2025-10-02',
+            '2025-11-04',
+            '2025-12-25',
+        ];
+
+        // Option B: Load from DB or API if you store holidays in a table or external JSON
+        // return DB::table('holidays')->pluck('date')->map(fn ($d) => Carbon::parse($d)->format('Y-m-d'))->toArray();
+    });
+
+    return !in_array($date->format('Y-m-d'), $holidays);
 }
 
 /**

@@ -114,6 +114,18 @@ class ZerodhaApiService
     }
 
 
+    public function get(string $endpoint)
+    {
+        $response = Http::withHeaders([
+            'Authorization' => 'token ' . $this->apiKey . ':' . $this->accessToken,
+        ])->get("https://api.kite.trade/$endpoint");
+
+        $response->throw(); // will raise exception on non-200
+        return $response->json();
+    }
+
+
+
 
 
     // 🔹 Get instruments data

@@ -28,12 +28,17 @@ class OrderController extends Controller
 
         if ($request->filled('type') && $request->type != 'all') {
             // Only BUY supported now
-            $query->whereRaw('1 = 1'); // placeholder
+            $query->whereRaw('1 = 1'); // future logic
+        }
+
+        if ($request->filled('account_id') && $request->account_id != 'all') {
+            $query->where('zerodha_account_id', $request->account_id);
         }
 
         $orders = $query->paginate(20);
+        $accounts = ZerodhaAccount::pluck('name', 'id');
 
-        return view('orders.index', compact('orders'));
+        return view('orders.index', compact('orders', 'accounts'));
     }
 
     public function showUploadForm()

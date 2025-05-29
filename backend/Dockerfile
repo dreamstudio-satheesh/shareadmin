@@ -1,67 +1,54 @@
 FROM php:8.3-fpm
 
-# Set PHP configuration values
+# PHP custom settings
 RUN echo 'max_execution_time = 300' >> /usr/local/etc/php/conf.d/99-custom.ini \
     && echo 'memory_limit = 512M' >> /usr/local/etc/php/conf.d/99-custom.ini
 
-# Install system dependencies and PHP extensions
+# System dependencies & PHP extensions
 RUN apt-get update && apt-get install -y \
     bash \
     git \
     curl \
     zip \
     unzip \
+    cron \
+    supervisor \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
     libonig-dev \
     libzip-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install \
-        pdo \
-        pdo_mysql \
-        gd \
-        pcntl \
-        zip \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pecl install redis && docker-php-ext-enable redis
-
+    && docker-php-ext-install pdo pdo_mysql gd pcntl zip \
+    && pecl install redis && docker-php-ext-enable redis \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy Composer from official image
+# Copy Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy the rest of the application
+# Copy application files
 COPY . .
 
-
 # Install PHP dependencies
-RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader \
+    && composer dump-autoload --optimize
 
-
-# Run post-install scripts if needed
-RUN composer dump-autoload --optimize
-
-# Set correct permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache
 
-# Expose PHP-FPM port
+# Setup cron
+COPY docker/crontab /etc/cron.d/laravel-scheduler
+RUN chmod 0644 /etc/cron.d/laravel-scheduler && crontab /etc/cron.d/laravel-scheduler
+
+# Setup Supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Expose ports
 EXPOSE 9000
 
-# Start PHP-FPM
-CMD ["php-fpm"]
-
-
-COPY start.sh /usr/local/bin/start.sh
-RUN chmod +x /usr/local/bin/start.sh
-
-# Use custom start script
-ENTRYPOINT ["start.sh"]
-
-# RUN apt-get update && apt-get install -y supervisor
-# COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Start supervisor (manages everything)
+CMD ["/usr/bin/supervisord"]

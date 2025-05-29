@@ -85,39 +85,39 @@ services:
       - web
 
 
-  # monitor_orders:
-  #   container_name: monitor_orders
-  #   build:
-  #     context: ./monitor_orders
-  #   volumes:
-  #     - ./monitor_orders:/app
-  #   env_file: .env
-  #   depends_on:
-  #     - redis
-  #     - mysql
-  #   restart: always
-  #   healthcheck:
-  #     test: ["CMD", "python", "healthcheck.py"]
-  #     interval: 20s
-  #     timeout: 5s
-  #     retries: 3
+  monitor_orders:
+    container_name: monitor_orders
+    build:
+      context: ./monitor_orders
+    volumes:
+      - ./monitor_orders:/app
+    env_file: .env
+    depends_on:
+      - redis
+      - mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
 
-  # sync_positions:
-  #   container_name: sync_positions
-  #   build:
-  #     context: ./sync_positions
-  #   volumes:
-  #     - ./sync_positions:/app
-  #   env_file: .env
-  #   depends_on:
-  #     - redis
-  #     - mysql
-  #   restart: always
-  #   healthcheck:
-  #     test: ["CMD", "python", "healthcheck.py"]
-  #     interval: 20s
-  #     timeout: 5s
-  #     retries: 3
+  sync_positions:
+    container_name: sync_positions
+    build:
+      context: ./sync_positions
+    volumes:
+      - ./sync_positions:/app
+    env_file: .env
+    depends_on:
+      - redis
+      - mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
 
 
 

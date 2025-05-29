@@ -1,5 +1,6 @@
 <?php
 
+use Carbon\Carbon;
 use App\Models\ZerodhaAccount;
 use App\Services\ZerodhaApiService;
 use Illuminate\Support\Facades\Redis;
@@ -63,15 +64,27 @@ Route::get('/redis-test', function () {
 
 
 
+
 Route::get('/ticks', function () {
     $keys = Redis::keys('tick:*');
     $ticks = [];
 
     foreach ($keys as $key) {
-        $json = Redis::get($key);
-        if ($json) {
-            $data = json_decode($json, true);
-            $ticks[] = $data;
+        $data = Redis::hgetall($key);
+        if (!empty($data)) {
+            $token = str_replace('tick:', '', $key);
+            $symbol = $data['symbol'] ?? null;
+
+            $ticks[] = [
+                'token' => $token,
+                'symbol' => $symbol,
+                'lp' => $data['lp'] ?? '--',
+                'ts' => $data['ts'] ?? null,
+                'market_open' => $data['market_open'] ?? null,
+                'time' => $data['ts']
+                    ? Carbon::createFromTimestamp($data['ts'])->diffForHumans()
+                    : null,
+            ];
         }
     }
 

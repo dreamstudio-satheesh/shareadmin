@@ -106,6 +106,7 @@ def on_ticks(ws, ticks):
             tick_data = {
                 'lp': str(tick.get('last_price', 0.0)),
                 'ts': str(int(tick.get('exchange_timestamp', datetime.now()).timestamp())),
+                'symbol': symbol,
                 'market_open': str(is_market_open())
             }
 
@@ -115,8 +116,7 @@ def on_ticks(ws, ticks):
             pipe.hset(key, mapping=tick_data)
             pipe.expire(key, 172800)  # 2-day expiry
             pipe.publish("ticks", json.dumps({
-                "token": token,
-                "symbol": symbol,
+                'token': token,
                 **tick_data
             }))
 
@@ -180,3 +180,4 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(1)
+        

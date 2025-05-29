@@ -13,8 +13,39 @@ class WatchlistController extends Controller
     public function index()
     {
         $symbols = Redis::smembers($this->redisKey);
-        return view('watchlist.index', compact('symbols'));
+        $data = [];
+
+        foreach ($symbols as $symbol) {
+            $token = getTokenFromSymbol($symbol); // helper function
+            $key = "tick:$token";
+
+            $tick = Redis::hgetall($key);
+
+            if ($tick) {
+                $ltp = $tick['lp'] ?? '--';
+                $timestamp = $tick['ts'] ?? null;
+                $marketOpen = $tick['market_open'] ?? 'false';
+                $time = $timestamp ? \Carbon\Carbon::createFromTimestamp($timestamp)->diffForHumans() : null;
+            } else {
+                $ltp = '--';
+                $time = null;
+                $marketOpen = 'false';
+            }
+
+            $data[] = [
+                'symbol' => $symbol,
+                'ltp' => $ltp,
+                'last_update' => $time,
+                'market_open' => $marketOpen === 'true',
+            ];
+        }
+
+        return view('watchlist.index', [
+            'symbols' => $symbols,
+            'tickData' => collect($data)->keyBy('symbol')
+        ]);
     }
+
 
     public function add(Request $request)
     {

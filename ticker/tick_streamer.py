@@ -7,6 +7,7 @@ import redis
 import requests
 import random
 from datetime import datetime
+import pytz
 
 # --- Configuration ---
 REDIS_HOST = os.getenv("REDIS_HOST", "redis")
@@ -71,20 +72,21 @@ def get_instruments_with_caching():
     except Exception as e:
         print(f"⚠️ API fetch failed: {e}")
         print("🛠️ Using fallback instrument data.")
-
         fallback_data = [
-            {"exchange": "NSE", "tradingsymbol": "RELIANCE", "instrument_token": "123456", "last_price": "2500.00", "name": "Reliance"},
-            {"exchange": "NSE", "tradingsymbol": "SBIN", "instrument_token": "123457", "last_price": "540.00", "name": "SBI"},
-            {"exchange": "NSE", "tradingsymbol": "HDFCBANK", "instrument_token": "123458", "last_price": "1500.00", "name": "HDFC Bank"},
+            {"exchange": "NSE", "tradingsymbol": "RELIANCE", "instrument_token": "123456", "last_price": "2500.00"},
+            {"exchange": "NSE", "tradingsymbol": "SBIN", "instrument_token": "123457", "last_price": "540.00"},
+            {"exchange": "NSE", "tradingsymbol": "HDFCBANK", "instrument_token": "123458", "last_price": "1500.00"},
         ]
-
         with open(filename, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=["exchange", "tradingsymbol", "instrument_token", "last_price", "name"])
+            writer = csv.DictWriter(f, fieldnames=["exchange", "tradingsymbol", "instrument_token", "last_price"])
             writer.writeheader()
             writer.writerows(fallback_data)
-
-        print(f"✅ Fallback instrument file created: {filename}")
         return fallback_data
+
+# --- Market Hours (simulate as closed) ---
+def is_market_open():
+    now = datetime.now(pytz.timezone("Asia/Kolkata"))
+    return now.weekday() < 5 and "09:15" <= now.strftime('%H:%M') <= "15:30"
 
 # --- Price Simulation ---
 def simulate_price_update(current_price):
@@ -93,18 +95,25 @@ def simulate_price_update(current_price):
     change_factor = 1 + random.uniform(-PRICE_VOLATILITY, PRICE_VOLATILITY)
     return round(max(0.01, current_price * change_factor), 2)
 
-def store_tick(redis_client, token, ltp):
+def store_tick(redis_client, token, symbol, ltp):
     key = f"tick:{token}"
-    payload = {
-        "token": token,
-        "ltp": ltp,
-        "time": datetime.now().isoformat()
-    }
-    # Store current price in Redis (for monitoring or API use)
-    redis_client.set(key, json.dumps(payload))
-    # Publish to 'ticks' channel (for Laravel broadcasting)
-    redis_client.publish('ticks', json.dumps(payload))
+    ts = int(datetime.now().timestamp())
+    market_open = str(is_market_open())
 
+    tick_data = {
+        "lp": str(ltp),
+        "ts": str(ts),
+        "symbol": symbol,
+        "market_open": market_open
+    }
+
+    redis_client.hset(key, mapping=tick_data)
+    redis_client.expire(key, 172800)  # 2-day expiry
+
+    redis_client.publish("ticks", json.dumps({
+        "token": token,
+        **tick_data
+    }))
 
 # --- Main Simulator ---
 def run_simulator():
@@ -117,7 +126,6 @@ def run_simulator():
     token_map = {}
     active_tokens = []
 
-    # Prepare token mapping
     for inst in instruments:
         symbol = f"{inst['exchange'].upper()}:{inst['tradingsymbol'].upper()}"
         if symbol in watchlist:
@@ -125,8 +133,7 @@ def run_simulator():
             ltp = float(inst.get('last_price') or INITIAL_PRICE_FALLBACK)
             token_map[token] = {
                 "symbol": symbol,
-                "current_price": ltp,
-                "name": inst.get("name", inst["tradingsymbol"])
+                "current_price": ltp
             }
             active_tokens.append(token)
             print(f"🎯 Tracking {symbol} (Token: {token}, LTP: {ltp})")
@@ -135,15 +142,15 @@ def run_simulator():
         print("❌ No valid tokens found for simulation. Exiting.")
         return
 
-    print("\n▶️ Streaming ticks every", SIMULATION_INTERVAL_SECONDS, "second(s)\n")
+    print(f"\n▶️ Simulating ticks every {SIMULATION_INTERVAL_SECONDS}s\n")
     try:
         while True:
             for token in active_tokens:
                 current = token_map[token]["current_price"]
                 new_price = simulate_price_update(current)
                 token_map[token]["current_price"] = new_price
-                store_tick(redis_client, token, new_price)
-                print(f"Tick: {token_map[token]['symbol']} → ₹{new_price:.2f}")
+                store_tick(redis_client, token, token_map[token]["symbol"], new_price)
+                print(f"[Tick] {token_map[token]['symbol']} → ₹{new_price:.2f}")
             time.sleep(SIMULATION_INTERVAL_SECONDS)
     except KeyboardInterrupt:
         print("\n⛔ Simulator stopped by user.")
