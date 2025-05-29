@@ -27,7 +27,7 @@ class ZerodhaApiService
     {
         $response = Http::asForm()->post('https://api.kite.trade/session/token', [
             'api_key'      => $this->apiKey,
-            'request_token'=> $requestToken,
+            'request_token' => $requestToken,
             'checksum'     => $this->generateChecksum($requestToken),
         ]);
 
@@ -96,5 +96,20 @@ class ZerodhaApiService
     {
         $query = http_build_query(['i' => $instruments]);
         return $this->request()->get("https://api.kite.trade/quote/ltp?$query")->json();
+    }
+
+
+
+
+    // 🔹 Get instruments data
+    public function getInstrumentsCsv(): string
+    {
+        $response = $this->request()->get('https://api.kite.trade/instruments');
+
+        if ($response->failed()) {
+            throw new \Exception('Failed to fetch instruments CSV: ' . $response->body());
+        }
+
+        return $response->body();
     }
 }

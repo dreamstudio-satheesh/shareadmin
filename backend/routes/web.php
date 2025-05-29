@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\WatchlistController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\InstrumentsController;
@@ -37,6 +38,10 @@ Route::middleware('admin.auth')->group(function () {
     Route::post('/watchlist/add', [WatchlistController::class, 'add']);
     Route::post('/watchlist/remove', [WatchlistController::class, 'remove']);
     Route::post('/watchlist/clear', [WatchlistController::class, 'clear']);
+
+    Route::get('/orders/upload', [OrderController::class, 'showUploadForm'])->name('orders.upload');
+    Route::post('/orders/import', [OrderController::class, 'import'])->name('orders.import');
+    Route::get('/orders/sample', [OrderController::class, 'downloadSample'])->name('orders.download.sample');
 
 
 

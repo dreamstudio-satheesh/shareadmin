@@ -9,7 +9,7 @@ class PendingOrder extends Model
     protected $fillable = [
         'zerodha_account_id', 'symbol', 'qty', 'target_percent',
         'ltp_at_upload', 'target_price', 'stoploss_price', 'status',
-        'reason', 'executed_price', 'executed_at', 'stoploss_triggered_at'
+        'reason', 'executed_price', 'executed_at', 'stoploss_triggered_at','ltp_source'
     ];
 
     public function account()

@@ -25,6 +25,7 @@ return new class extends Migration
             $table->decimal('executed_price', 10, 2)->nullable();
             $table->timestamp('executed_at')->nullable();
             $table->timestamp('stoploss_triggered_at')->nullable();
+            $table->string('ltp_source')->nullable(); // redis / instrument
             $table->timestamps();
         });
     }

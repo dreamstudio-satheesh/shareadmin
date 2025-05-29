@@ -1,5 +1,9 @@
 FROM php:8.3-fpm
 
+# Set PHP configuration values
+RUN echo 'max_execution_time = 300' >> /usr/local/etc/php/conf.d/99-custom.ini \
+    && echo 'memory_limit = 512M' >> /usr/local/etc/php/conf.d/99-custom.ini
+
 # Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     bash \

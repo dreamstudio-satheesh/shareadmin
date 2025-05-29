@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Command to run your application
-CMD ["python", "tick_streamer.py"]
+CMD ["python", "ticker.py"]

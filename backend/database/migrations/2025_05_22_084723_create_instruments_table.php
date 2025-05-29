@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('instruments', function (Blueprint $table) {
             $table->id();
-            $table->string('instrument_token')->unique();
+            $table->unsignedBigInteger('instrument_token')->unique();
             $table->string('exchange', 50);
             $table->string('tradingsymbol');
             $table->string('name')->nullable();

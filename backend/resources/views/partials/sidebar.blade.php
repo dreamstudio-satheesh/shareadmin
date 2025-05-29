@@ -24,6 +24,13 @@
                     </a>
                 </li>
 
+                 <li class="nav-item">
+                    <a class="nav-link" href="{{ route('zerodha_accounts.index') }}">
+                        <i class="mdi mdi-account-outline"></i>
+                        <span>Accounts</span>
+                    </a>
+                </li>
+
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('instruments.index') }}">
                         <i class="mdi mdi-database-import"></i>
@@ -39,7 +46,7 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
+                    <a class="nav-link" href="{{ route('orders.upload') }}">
                         <i class="mdi mdi-file-upload-outline"></i>
                         <span>Upload Orders</span>
                     </a>
