@@ -17,6 +17,9 @@ class BroadcastRedisTicks extends Command
         if (!isMarketOpen()) {
             // $this->info('⏹ Market is closed.');
             // return;
+            // Temporarily disable market check for testing
+            $this->warn('⚠️ Market is closed, but continuing for testing purposes.');
+
         }
 
         $this->info('📡 Starting Redis tick broadcaster...');
