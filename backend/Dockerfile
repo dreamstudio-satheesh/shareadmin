@@ -37,10 +37,12 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
     && composer dump-autoload --optimize
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && find /var/www/html -type f -exec chmod 644 {} \; \
-    && find /var/www/html -type d -exec chmod 755 {} \; \
-    && chmod -R 775 storage bootstrap/cache 
+# RUN chown -R www-data:www-data /var/www/html \
+#     && find /var/www/html -type f -exec chmod 644 {} \; \
+#     && find /var/www/html -type d -exec chmod 755 {} \; \
+#     &&  chmod -R 775 storage bootstrap/cache
+
+  RUN  chmod -R 775 storage bootstrap/cache 
 
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
