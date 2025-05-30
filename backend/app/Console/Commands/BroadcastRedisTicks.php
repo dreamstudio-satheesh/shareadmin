@@ -15,7 +15,7 @@ class BroadcastRedisTicks extends Command
     public function handle()
     {
         if (!isMarketOpen()) {
-            $this->info('⏹ Market is closed.');
+            // $this->info('⏹ Market is closed.');
             // return;
         }
 
