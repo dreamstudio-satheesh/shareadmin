@@ -37,16 +37,18 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
     && composer dump-autoload --optimize
 
 # Set permissions
- RUN chown -R git:git /var/www/html \
-    && chmod -R 775 storage bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html \
+    && find /var/www/html -type f -exec chmod 644 {} \; \
+    && find /var/www/html -type d -exec chmod 755 {} \; \
+    && chmod -R 775 storage bootstrap/cache 
 
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
 RUN chmod 0644 /etc/cron.d/laravel-scheduler && crontab /etc/cron.d/laravel-scheduler
 
 # Copy and set start script
-COPY start.sh /start.sh
-RUN chmod +x /start.sh
+# COPY start.sh /start.sh
+# RUN chmod +x /start.sh
 
 # Expose PHP-FPM port for Caddy
 EXPOSE 9000
