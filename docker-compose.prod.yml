@@ -19,7 +19,7 @@ services:
           memory: 1024M
         reservations:
           memory: 512M
-    # env_file: .env
+    env_file: .env
     depends_on:
       - mysql
       - redis
@@ -31,12 +31,6 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pgrep -f 'python3 /app/ticker.py' || exit 1"]
-    #   interval: 10s
-    #   timeout: 5s
-    #   retries: 3
-    #   start_period: 5s
     depends_on:
       - redis
     networks:
@@ -51,6 +45,7 @@ services:
       - "3306:3306"
     volumes:
       - ./mysql_data:/var/lib/mysql
+    env_file: .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -76,6 +71,7 @@ services:
     restart: unless-stopped
     ports:
       - "8090:80"
+    env_file: .env
     environment:
       PMA_HOST: mysql
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -83,7 +79,6 @@ services:
       - mysql
     networks:
       - web
-
 
   monitor_orders:
     container_name: monitor_orders
@@ -137,15 +132,13 @@ services:
       - caddy_config:/config
     networks:
       - web
-      
+
 volumes:
   mysql_data:
   redis_data:
   caddy_data:
   caddy_config:
-  
+
 networks:
   web:
     driver: bridge
-
-    
