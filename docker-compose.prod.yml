@@ -1,0 +1,149 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ./backend:/var/www/html
+    ports:
+      - "9000:9000"
+      - "8080:8080"
+    networks:
+      - web
+    working_dir: /var/www/html
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+    # env_file: .env
+    depends_on:
+      - mysql
+      - redis
+
+  ticker:
+    container_name: ticker
+    build:
+      context: ./ticker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pgrep -f 'python3 /app/ticker.py' || exit 1"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 5s
+    depends_on:
+      - redis
+    networks:
+      - web
+    command: ["python3", "tick_streamer.py"]
+
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - web
+
+  redis:
+    container_name: redis
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
+    networks:
+      - web
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    environment:
+      PMA_HOST: mysql
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - web
+
+
+  monitor_orders:
+    container_name: monitor_orders
+    build:
+      context: ./monitor_orders
+    volumes:
+      - ./monitor_orders:/app
+    env_file: .env
+    depends_on:
+      - redis
+      - mysql
+    restart: always
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  sync_positions:
+    container_name: sync_positions
+    build:
+      context: ./sync_positions
+    volumes:
+      - ./sync_positions:/app
+    env_file: .env
+    depends_on:
+      - redis
+      - mysql
+    restart: always
+    networks:
+      - web
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  webserver:
+    container_name: webserver
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./backend:/var/www/html
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+      
+volumes:
+  mysql_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  
+networks:
+  web:
+    driver: bridge
