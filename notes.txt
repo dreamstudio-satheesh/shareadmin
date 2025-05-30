@@ -1,1 +1,1 @@
-adminapp docker
+adminapp docker ls
