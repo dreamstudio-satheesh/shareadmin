@@ -1,9 +1,10 @@
 kite.servcp.com {
     root * /var/www/html/public
+
     php_fastcgi backend:9000
     file_server
 
-    # ✅ Proxy Reverb WebSocket connections
+    # ✅ Reverse proxy for Reverb WebSocket (Laravel Echo server)
     reverse_proxy /app/* backend:8080 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
@@ -11,13 +12,15 @@ kite.servcp.com {
         header_up X-Forwarded-Proto {scheme}
     }
 
-    # ✅ Security headers
+    # ✅ Recommended security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
+        X-Frame-Options "SAMEORIGIN"
         Referrer-Policy "strict-origin-when-cross-origin"
+        X-XSS-Protection "1; mode=block"
     }
 
-    encode gzip
+    # ✅ Compression
+    encode gzip zstd
 }
