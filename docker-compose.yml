@@ -119,22 +119,19 @@ services:
       timeout: 5s
       retries: 3
 
-  caddy:
-    container_name: caddy
-    image: caddy:alpine
+  webserver:
+    container_name: webserver
+    image: caddy:2
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./backend:/var/www/html
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - backend
-    networks:
-      - web
-
+      
 volumes:
   mysql_data:
   redis_data:
