@@ -22,7 +22,7 @@ class BroadcastRedisTicks extends Command
                 return;
             }
 
-            Redis::psubscribe(['ticks'], function ($message, $channel) {
+            Redis::psubscribe(['ticks'], function ($pattern, $channel, $message) {
                 try {
                     if (!isMarketOpen()) {
                         logger()->info('⏹ Market closed during broadcast. Ignoring tick.');
@@ -33,7 +33,9 @@ class BroadcastRedisTicks extends Command
 
                     if (is_array($data)) {
                         broadcast(new TickUpdate($data));
-                        logger()->info("📤 Tick broadcasted", $data);
+                        logger()->info('🔥 Sent TickUpdate: ' . json_encode($data));
+                    } else {
+                        logger()->warning('⚠️ Invalid tick data format: ' . $message);
                     }
                 } catch (Throwable $inner) {
                     logger()->error('❌ Tick handler error: ' . $inner->getMessage());
