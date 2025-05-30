@@ -37,7 +37,7 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
     && composer dump-autoload --optimize
 
 # Set permissions
-# RUN chown -R www-data:www-data /var/www/html \
+ RUN chown -R git:git /var/www/html \
 #     && chmod -R 775 storage bootstrap/cache
 
 # Setup cron
