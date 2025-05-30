@@ -31,17 +31,17 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: .env
-    healthcheck:
-      test: ["CMD-SHELL", "pgrep -f 'python3 /app/ticker.py' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pgrep -f 'python3 /app/ticker.py' || exit 1"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 5s
     depends_on:
       - redis
     networks:
       - web
-    command: ["python3", "ticker.py"]
+    command: ["python3", "tick_streamer.py"]
 
   mysql:
     container_name: mysql
