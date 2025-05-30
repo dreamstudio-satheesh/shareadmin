@@ -27,6 +27,9 @@ php artisan ticks:broadcast &
 # Start Reverb WebSocket (blocking)
 php artisan reverb:start
 
+# Wait for all background jobs
+wait
+
 
 # [program:cron]
 # command=cron -f
