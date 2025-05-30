@@ -1,3 +1,5 @@
 /mysql_data
 /redis_data
 docker-compose.yml
+.env
+# Ignore all log files
