@@ -1,1 +1,1 @@
-adminapp
+adminapp docker
