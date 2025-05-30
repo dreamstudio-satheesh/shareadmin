@@ -14,7 +14,7 @@ class BroadcastRedisTicks extends Command
 
     public function handle()
     {
-        if (!isMarketOpen() || !isTradingDay()) {
+        if (!isMarketOpen()) {
             $this->info('⏹ Market is closed or today is not a trading day. Skipping tick broadcast.');
             return;
         }
