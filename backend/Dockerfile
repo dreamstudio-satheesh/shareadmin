@@ -38,7 +38,7 @@ RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --opti
 
 # Set permissions
  RUN chown -R git:git /var/www/html \
-#     && chmod -R 775 storage bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache
 
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
