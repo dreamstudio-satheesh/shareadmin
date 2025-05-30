@@ -14,36 +14,32 @@ class BroadcastRedisTicks extends Command
 
     public function handle()
     {
-        if (!isMarketOpen() || !isTradingDay()) {
-            $this->info('⏹ Market is closed or today is not a trading day. Skipping tick broadcast.');
-            return;
-        }
-
         $this->info('📡 Starting Redis tick broadcaster...');
 
         try {
-            $redis = Redis::connection();
-            $pubsub = $redis->pubSubLoop();
-            $pubsub->subscribe('ticks');
+            if (!isMarketOpen()) {
+                $this->warn('⏹ Market is closed. Skipping tick broadcast.');
+                return;
+            }
 
-            foreach ($pubsub as $message) {
-                if (!isMarketOpen()) {
-                    $this->info('⏹ Market closed during broadcast. Exiting loop.');
-                    break;
-                }
+            Redis::psubscribe(['ticks'], function ($message, $channel) {
+                try {
+                    if (!isMarketOpen()) {
+                        logger()->info('⏹ Market closed during broadcast. Ignoring tick.');
+                        return;
+                    }
 
-                if ($message->kind === 'message') {
-                    $data = json_decode($message->payload, true);
+                    $data = json_decode($message, true);
 
                     if (is_array($data)) {
                         broadcast(new TickUpdate($data))->toOthers();
+                        logger()->info("📤 Tick broadcasted", $data);
                     }
+                } catch (Throwable $inner) {
+                    logger()->error('❌ Tick handler error: ' . $inner->getMessage());
+                    report($inner);
                 }
-            }
-
-            $pubsub->unsubscribe();
-            $this->info('✅ Tick broadcasting stopped.');
-
+            });
         } catch (Throwable $e) {
             $this->error('❌ Error in tick broadcasting: ' . $e->getMessage());
             report($e);

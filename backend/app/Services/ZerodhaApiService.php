@@ -124,6 +124,22 @@ class ZerodhaApiService
         return $response->json();
     }
 
+    public function getPreviousClose(string $instrument): float
+    {
+        $response = $this->request()->get('https://api.kite.trade/quote/ohlc', [
+            'query' => ['i' => $instrument],
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json()['data'][$instrument] ?? null;
+            if ($data && isset($data['ohlc']['close'])) {
+                return floatval($data['ohlc']['close']);
+            }
+        }
+
+        throw new \Exception("Failed to retrieve previous close for $instrument");
+    }
+
 
 
 

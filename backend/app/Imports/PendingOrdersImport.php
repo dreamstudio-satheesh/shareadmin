@@ -2,37 +2,45 @@
 
 namespace App\Imports;
 
+use Carbon\Carbon;
 use App\Models\PendingOrder;
+use App\Services\LTPService;
+use App\Traits\TradeHelpers;
 use App\Models\ZerodhaAccount;
+use App\Services\WatchlistManager;
 use Illuminate\Support\Collection;
+use App\Services\ZerodhaApiService;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
-use App\Services\ZerodhaApiService;
-use App\Traits\TradeHelpers;
 
 class PendingOrdersImport implements ToCollection
 {
     use TradeHelpers;
 
-    protected $accountId;
+    protected int $accountId;
     protected ZerodhaApiService $api;
+    protected LTPService $ltpService;
 
-    public function __construct($accountId)
+    public function __construct(int $accountId)
     {
         $this->accountId = $accountId;
+        $this->ltpService = new LTPService();
 
         $account = ZerodhaAccount::whereNotNull('access_token')->first();
+        if (! $account || ! $account->access_token) {
+            throw new \Exception('Missing access token. Please login to Zerodha before uploading orders.');
+        }
 
-        if (! $account) {
-            throw new \Exception('No Zerodha account with access token found for API fallback.');
+        if ($account->token_expires_at && Carbon::now()->greaterThan(Carbon::parse($account->token_expires_at))) {
+            throw new \Exception('Access token expired. Please re-login to Zerodha.');
         }
 
         $this->api = new ZerodhaApiService($account->api_key, $account->api_secret, $account->access_token);
     }
 
-    public function collection(Collection $rows)
+    public function collection(Collection $rows): void
     {
-        $rows->shift(); // skip header
+        $rows->shift(); // Skip header row
 
         foreach ($rows as $index => $row) {
             try {
@@ -49,10 +57,15 @@ class PendingOrdersImport implements ToCollection
                 [$exchange, $symbol] = $this->parseSymbol($symbolInput);
                 $fullSymbol = "$exchange:$symbol";
 
+                // Ensure symbol is in watchlist
+                WatchlistManager::ensureExists($fullSymbol);
+
+                // Skip duplicate pending orders
                 if (PendingOrder::where('zerodha_account_id', $this->accountId)
                     ->where('symbol', $fullSymbol)
                     ->where('status', 'pending')
-                    ->exists()) {
+                    ->exists()
+                ) {
                     Log::info("Row $index: Duplicate order for $fullSymbol, skipped.");
                     continue;
                 }
@@ -63,8 +76,16 @@ class PendingOrdersImport implements ToCollection
                     continue;
                 }
 
-                [$ltp, $source] = $this->fetchLTP($exchange, $symbol, $token, $fullSymbol, $this->api, $index);
-                if (!$ltp) continue;
+                try {
+                    [$ltp, $source] = $this->ltpService->get($exchange, $symbol, $token, $fullSymbol, $this->api, $index);
+                    if (!$ltp) {
+                        Log::warning("Row $index: LTP not found for $fullSymbol.");
+                        continue;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Row $index: Failed to fetch LTP for $fullSymbol. Error: " . $e->getMessage());
+                    continue;
+                }
 
                 $tickSize = $this->getTickSize($exchange, $symbol);
                 $targetPrice = $this->snapToTick($ltp + ($ltp * $targetPercent / 100), $tickSize, true);
@@ -83,7 +104,6 @@ class PendingOrdersImport implements ToCollection
                 ]);
 
                 Log::info("Row $index: Imported $fullSymbol with LTP $ltp from $source.");
-
             } catch (\Throwable $e) {
                 Log::error("Row $index: Failed for symbol '" . ($row[0] ?? '') . "'. Error: " . $e->getMessage());
             }

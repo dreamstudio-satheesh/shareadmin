@@ -7,6 +7,7 @@ use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Models\ZerodhaAccount;
 use App\Imports\PendingOrdersImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Response;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -54,12 +55,35 @@ class OrderController extends Controller
             'zerodha_account_id' => 'required|exists:zerodha_accounts,id',
         ]);
 
-        Excel::import(new PendingOrdersImport($request->zerodha_account_id), $request->file('file'));
-
-        return redirect()->back()->with('success', 'Orders uploaded successfully.');
+        try {
+            Excel::import(new PendingOrdersImport($request->zerodha_account_id), $request->file('file'));
+            return redirect()->back()->with('success', 'Orders uploaded successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('warning', $e->getMessage());
+        }
     }
 
 
+
+    public function bulkDelete(Request $request)
+    {
+        Order::whereIn('id', $request->order_ids)->delete();
+        return response()->json(['success' => true]);
+    }
+
+    public function destroy($id)
+    {
+        Order::findOrFail($id)->delete();
+        return response()->json(['success' => true]);
+    }
+
+
+
+    /**
+     * Download a sample Excel file for order upload.
+     *
+     * @return \Illuminate\Http\Response
+     */
 
     public function downloadSample()
     {
