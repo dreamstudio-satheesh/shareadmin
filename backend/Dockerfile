@@ -47,8 +47,8 @@ COPY docker/crontab /etc/cron.d/laravel-scheduler
 RUN chmod 0644 /etc/cron.d/laravel-scheduler && crontab /etc/cron.d/laravel-scheduler
 
 # Copy and set start script
-# COPY start.sh /start.sh
-# RUN chmod +x /start.sh
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
 # Expose PHP-FPM port for Caddy
 EXPOSE 9000
