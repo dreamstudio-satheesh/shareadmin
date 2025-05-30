@@ -47,10 +47,10 @@ COPY docker/crontab /etc/cron.d/laravel-scheduler
 RUN chmod 0644 /etc/cron.d/laravel-scheduler && crontab /etc/cron.d/laravel-scheduler
 
 # Setup Supervisor
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord.conf /etc/supervisord.conf
 
 # Expose ports
 EXPOSE 9000
 
-# Start supervisor (manages everything)
-CMD ["/usr/bin/supervisord"]
+# Start supervisor using the correct config path
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
