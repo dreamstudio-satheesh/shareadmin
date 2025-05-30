@@ -14,34 +14,39 @@ class BroadcastRedisTicks extends Command
 
     public function handle()
     {
+        if (!isMarketOpen() || !isTradingDay()) {
+            $this->info('⏹ Market is closed or today is not a trading day. Skipping tick broadcast.');
+            return;
+        }
+
         $this->info('📡 Starting Redis tick broadcaster...');
 
         try {
-            if (!isMarketOpen()) {
-                $this->warn('⏹ Market is closed. Skipping tick broadcast.');
-                return;
-            }
+            $redis = Redis::connection();
+            $pubsub = $redis->pubSubLoop();
+            $pubsub->subscribe('ticks');
 
-            Redis::psubscribe(['ticks'], function ($pattern, $channel, $message) {
-                try {
-                    if (!isMarketOpen()) {
-                        logger()->info('⏹ Market closed during broadcast. Ignoring tick.');
-                        return;
-                    }
+            foreach ($pubsub as $message) {
+                if (!isMarketOpen()) {
+                    $this->info('⏹ Market closed during broadcast. Exiting loop.');
+                    break;
+                }
 
-                    $data = json_decode($message, true);
+                if ($message->kind === 'message') {
+                    $data = json_decode($message->payload, true);
 
                     if (is_array($data)) {
                         broadcast(new TickUpdate($data));
                         logger()->info('🔥 Sent TickUpdate: ' . json_encode($data));
                     } else {
-                        logger()->warning('⚠️ Invalid tick data format: ' . $message);
+                        logger()->warning('⚠️ Invalid tick data: ' . $message->payload);
                     }
-                } catch (Throwable $inner) {
-                    logger()->error('❌ Tick handler error: ' . $inner->getMessage());
-                    report($inner);
                 }
-            });
+            }
+
+            $pubsub->unsubscribe();
+            $this->info('✅ Tick broadcasting stopped.');
+
         } catch (Throwable $e) {
             $this->error('❌ Error in tick broadcasting: ' . $e->getMessage());
             report($e);
