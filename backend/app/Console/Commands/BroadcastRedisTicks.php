@@ -32,7 +32,7 @@ class BroadcastRedisTicks extends Command
                     $data = json_decode($message, true);
 
                     if (is_array($data)) {
-                        broadcast(new TickUpdate($data))->toOthers();
+                        broadcast(new TickUpdate($data));
                         logger()->info("📤 Tick broadcasted", $data);
                     }
                 } catch (Throwable $inner) {
