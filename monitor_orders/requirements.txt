@@ -1,3 +1,6 @@
-mysql-connector-python
+# This file lists the Python package dependencies for the sync_positions module.
+requests
 redis
 pytz
+mysql-connector-python
+

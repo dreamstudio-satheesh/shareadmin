@@ -136,7 +136,7 @@ def run_simulator():
                 "current_price": ltp
             }
             active_tokens.append(token)
-            print(f"🎯 Tracking {symbol} (Token: {token}, LTP: {ltp})")
+            # print(f"🎯 Tracking {symbol} (Token: {token}, LTP: {ltp})")
 
     if not active_tokens:
         print("❌ No valid tokens found for simulation. Exiting.")
@@ -159,3 +159,24 @@ def run_simulator():
 
 if __name__ == "__main__":
     run_simulator()
+
+
+
+# This code simulates a tick streamer that generates random price updates for a watchlist of instruments.
+# It connects to a Redis instance, fetches instrument data, and publishes simulated ticks.
+# The simulator runs indefinitely, updating prices every second and publishing them to Redis.
+# It uses a fallback mechanism for instrument data and handles Redis connection errors gracefully.
+# It also includes a simple market open check to simulate real trading hours.
+# The code is designed to be run as a standalone script, simulating a live trading environment.
+# It uses environment variables for configuration, making it flexible for different environments.
+# It also caches instrument data to avoid repeated API calls, improving performance.
+# It prints detailed logs of the simulation process, including any errors encountered.
+# It uses a simple price volatility model to simulate realistic price movements.
+# It supports a watchlist loaded from Redis, allowing dynamic updates to the instruments being tracked.
+# It handles keyboard interrupts gracefully, allowing the user to stop the simulation cleanly.
+# It uses Python's built-in libraries for networking, file I/O, and data handling, ensuring compatibility across platforms.
+# It is designed to be lightweight and efficient, suitable for running in a containerized environment.
+# It can be easily extended to include more features, such as advanced price simulation models or integration with other systems.
+# This code is a standalone script that simulates a tick streamer for financial instruments.
+# It can be used for testing trading algorithms, backtesting strategies, or simply as a learning tool.
+# It is not intended for production use and should be adapted for real trading scenarios with proper error handling and data validation.

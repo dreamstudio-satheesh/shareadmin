@@ -2,7 +2,6 @@ import os
 import mysql.connector
 import requests
 import redis
-import json
 from datetime import datetime
 import logging
 import time
@@ -17,7 +16,7 @@ DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
     'user': os.getenv('DB_USERNAME', 'root'),
     'password': os.getenv('DB_PASSWORD', ''),
-    'database': os.getenv('DB_DATABASE', 'zerodha'),
+    'database': os.getenv('DB_DATABASE', 'db_admin'),
 }
 
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
@@ -29,34 +28,16 @@ cursor = db.cursor(dictionary=True)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 
-# --- In-memory Holiday Cache ---
-HOLIDAYS_CACHE = set()
-
-def load_holidays_from_file():
-    global HOLIDAYS_CACHE
-    try:
-        with open('trading_holidays.json') as f:
-            holidays = json.load(f)
-            HOLIDAYS_CACHE = {
-                datetime.strptime(h['Date'], '%d/%m/%Y').strftime('%Y-%m-%d')
-                for h in holidays
-            }
-            logging.info(f"Loaded {len(HOLIDAYS_CACHE)} holidays from file.")
-    except Exception as e:
-        logging.error(f"Failed to load holidays file: {e}")
-        HOLIDAYS_CACHE = set()
-
 def is_market_open():
     now = datetime.now(TIMEZONE)
+    # Mon-Fri, 9:00am to 3:45pm
     return now.weekday() < 5 and '09:00' <= now.strftime('%H:%M') <= '15:45'
 
-def is_trading_holiday():
-    today = datetime.now(TIMEZONE).strftime('%Y-%m-%d')
-    return today in HOLIDAYS_CACHE
-
 def log_cron(status, message):
-    cursor.execute("INSERT INTO cron_logs (task, status, message, created_at) VALUES (%s, %s, %s, NOW())",
-                   ('sync_positions', status, message))
+    cursor.execute(
+        "INSERT INTO cron_logs (task, status, message, created_at) VALUES (%s, %s, %s, NOW())",
+        ('sync_positions', status, message)
+    )
     db.commit()
 
 def get_ltp(symbol):
@@ -65,12 +46,6 @@ def get_ltp(symbol):
     return float(tick['lp']) if 'lp' in tick else None
 
 def sync_positions():
-    if not is_market_open() or is_trading_holiday():
-        msg = "Market closed or holiday. Skipping position sync."
-        logging.info(msg)
-        log_cron('skipped', msg)
-        return
-
     cursor.execute("SELECT id, access_token, api_key FROM zerodha_accounts WHERE access_token IS NOT NULL")
     accounts = cursor.fetchall()
 
@@ -111,22 +86,40 @@ def sync_positions():
             db.commit()
             msg = f"Account {account['id']} synced {insert_count} positions"
             logging.info(msg)
-            log_cron('success', msg)
+            # No cron log here, log only on market state change
 
         except Exception as e:
             err_msg = f"Sync failed for account {account['id']}: {e}"
             logging.error(err_msg)
             log_cron('error', err_msg)
 
-# --- Run Every Minute ---
 if __name__ == '__main__':
-    load_holidays_from_file()
+    last_market_state = None
     while True:
         try:
-            sync_positions()
+            market_open = is_market_open()
+            if market_open:
+                if last_market_state != 'open':
+                    log_cron('market_open', 'Market opened. Starting position sync.')
+                    last_market_state = 'open'
+                sync_positions()
+            else:
+                if last_market_state != 'closed':
+                    log_cron('market_closed', 'Market closed. Position sync paused.')
+                    last_market_state = 'closed'
+            # Only logs on state change
         except Exception as e:
             err = traceback.format_exc()
             logging.error(err)
             log_cron('error', f"Fatal exception: {e}")
         time.sleep(60)
-# --- End of sync_positions.py ---
+
+
+# This code syncs positions from Zerodha to a MySQL database, updating the last traded price and P&L.
+# It runs periodically, checking if the market is open and logging events to a cron log table.  
+# It uses Redis for caching live tick data to avoid excessive API calls.
+# It handles errors gracefully and logs significant events, including market state changes.
+# It also ensures that positions with zero quantity are not stored in the database.
+# It uses environment variables for configuration, making it flexible for different environments.
+# It is designed to run continuously, checking the market state every minute and syncing positions accordingly.
+# This code is a standalone script that can be run as a cron job or in a long-running process.

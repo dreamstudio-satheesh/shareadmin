@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('cron_logs', function (Blueprint $table) {
             $table->id();
-            $table->string('command');
-            $table->enum('status', ['success', 'error']);
+             $table->string('task');
+            $table->enum('status', ['success', 'error', 'skipped'])->default('success');
             $table->text('message')->nullable();
             $table->timestamps();
         });

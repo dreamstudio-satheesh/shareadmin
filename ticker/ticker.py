@@ -120,7 +120,7 @@ def on_ticks(ws, ticks):
                 **tick_data
             }))
 
-            logging.info(f"[Tick] {symbol} => {tick_data}")
+            # logging.info(f"[Tick] {symbol} => {tick_data}")
         pipe.execute()
     except Exception as e:
         logging.error(f"[Tick Error] {e}")

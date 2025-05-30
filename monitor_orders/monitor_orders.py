@@ -6,7 +6,6 @@ import logging
 import pytz
 import time
 import traceback
-import json
 
 # --- Setup ---
 TIMEZONE = pytz.timezone('Asia/Kolkata')
@@ -26,31 +25,11 @@ cursor = db.cursor(dictionary=True)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')
 
-# --- Load Holidays from JSON ---
-HOLIDAYS_CACHE = set()
-
-def load_holidays_from_file():
-    global HOLIDAYS_CACHE
-    try:
-        with open('trading_holidays.json') as f:
-            holidays = json.load(f)
-            HOLIDAYS_CACHE = {
-                datetime.strptime(h['Date'], '%d/%m/%Y').strftime('%Y-%m-%d')
-                for h in holidays
-            }
-            logging.info(f"Loaded {len(HOLIDAYS_CACHE)} holidays from file.")
-    except Exception as e:
-        logging.error(f"Failed to load holidays file: {e}")
-        HOLIDAYS_CACHE = set()
-
 # --- Utils ---
 def is_market_open():
     now = datetime.now(TIMEZONE)
+    # Mon-Fri, 9:15am to 3:30pm
     return now.weekday() < 5 and '09:15' <= now.strftime('%H:%M') <= '15:30'
-
-def is_trading_holiday():
-    today = datetime.now(TIMEZONE).strftime('%Y-%m-%d')
-    return today in HOLIDAYS_CACHE
 
 def round_to_tick(price, tick_size):
     return round(round(price / tick_size) * tick_size, 2)
@@ -67,11 +46,6 @@ def log_order_event(order_id, action, message):
 
 # --- Main Logic ---
 def monitor_orders():
-    if not is_market_open() or is_trading_holiday():
-        logging.info("Market closed or holiday. Skipping.")
-        log_cron('skipped', 'Market closed or holiday')
-        return
-
     cursor.execute("""
         SELECT po.*, z.access_token
         FROM pending_orders po
@@ -130,14 +104,40 @@ def monitor_orders():
 
     log_cron('success', 'Cycle complete')
 
-# --- Loop Forever ---
+# --- Loop Forever with Market State Change Logging ---
 if __name__ == '__main__':
-    load_holidays_from_file()
+    last_market_state = None
     while True:
         try:
-            monitor_orders()
+            market_open = is_market_open()
+            if market_open:
+                if last_market_state != 'open':
+                    log_cron('market_open', 'Market opened. Starting order monitoring.')
+                    last_market_state = 'open'
+                monitor_orders()
+            else:
+                if last_market_state != 'closed':
+                    log_cron('market_closed', 'Market closed. Order monitoring paused.')
+                    last_market_state = 'closed'
+            # Only logs on state change
         except Exception as e:
             err = traceback.format_exc()
             logging.error(f"Exception: {e}")
             log_cron('error', str(e))
         time.sleep(3)
+        
+        
+# This code monitors pending orders in a Zerodha account, checking their status against live market data.
+# It updates the database with order execution or cancellation details and logs significant events.
+# It runs continuously, checking the market state and logging events to a cron log table.
+# It uses Redis for real-time data and MySQL for persistent storage.    
+# It handles errors gracefully, logging them for later review.
+# It also rounds prices to the nearest tick size for accurate order matching.
+# It ensures that orders are processed only when the market is open, and it logs events on market state changes.
+# It also skips orders if the last traded price (LTP) is not available, logging the reason for skipping.
+# This ensures that the system operates efficiently and avoids unnecessary API calls.
+# This code monitors pending orders in a Zerodha account, checking their status against live market data.
+# It updates the database with order execution or cancellation details and logs significant events.
+# It runs continuously, checking the market state and logging events to a cron log table.
+# It uses Redis for real-time data and MySQL for persistent storage.
+# It handles errors gracefully, logging them for later review.
