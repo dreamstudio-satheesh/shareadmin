@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
     env_file: .env
     healthcheck:
-      test: ["CMD-SHELL", "pgrep -f ticker.py || exit 1"]
+      test: ["CMD-SHELL", "pgrep -f 'python3 /app/ticker.py' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
