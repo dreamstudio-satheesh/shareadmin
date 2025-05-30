@@ -16,33 +16,20 @@ class BroadcastRedisTicks extends Command
     {
         if (!isMarketOpen()) {
             $this->info('⏹ Market is closed.');
-           // return;
+            // return;
         }
 
         $this->info('📡 Starting Redis tick broadcaster...');
 
         try {
-            $redis = Redis::connection()->client();
-            $pubsub = $redis->pubSubLoop();
-            $pubsub->subscribe('ticks');
+            Redis::subscribe(['ticks'], function ($message) {
+                $data = json_decode($message, true);
 
-            foreach ($pubsub as $message) {
-                if ($message->kind === 'message') {
-                    $data = json_decode($message->payload, true);
-
-                    if (is_array($data)) {
-                        broadcast(new TickUpdate($data))->toOthers();
-                        logger()->info('🔥 Broadcasted TickUpdate: ' . json_encode($data));
-                    }
+                if (is_array($data)) {
+                    broadcast(new TickUpdate($data))->toOthers();
+                    logger()->info('🔥 Broadcasted TickUpdate: ' . json_encode($data));
                 }
-
-                if (!isMarketOpen()) {
-                    $this->info('⏹ Market closed during broadcast. Exiting loop.');
-                    break;
-                }
-            }
-
-            $pubsub->unsubscribe();
+            });
         } catch (Throwable $e) {
             $this->error('❌ Error in tick broadcasting: ' . $e->getMessage());
             report($e);
