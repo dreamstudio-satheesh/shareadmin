@@ -1,17 +1,31 @@
 #!/bin/bash
+
+# Exit on error
+set -e
+
+# Ensure Laravel caches are fresh
 php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 
-# Start Laravel HTTP server in background
-php artisan serve --host=0.0.0.0 --port=9000 &
+# Fix permissions (optional, safe fallback)
+chown -R www-data:www-data /var/www/html
+chmod -R 775 storage bootstrap/cache
 
-# Start Redis subscriber and broadcast ticks in background
-php artisan ticks:broadcast &
+# Ensure PHP-FPM listens on 0.0.0.0:9000
+sed -i 's|^listen = .*|listen = 0.0.0.0:9000|' /usr/local/etc/php-fpm.d/www.conf
 
-# Start Laravel queue worker in background
+# Start PHP-FPM in background
+php-fpm -D
+
+# Start queue worker
 php artisan queue:work --tries=3 &
 
-# Start Reverb WebSocket server in foreground (blocking)
-php artisan reverb:start # --debug
+# Start ticks broadcaster
+php artisan ticks:broadcast &
+
+# Start Reverb WebSocket (blocking)
+php artisan reverb:start
 
 
 # [program:cron]

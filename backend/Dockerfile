@@ -23,8 +23,6 @@ RUN apt-get update && apt-get install -y \
     && pecl install redis && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-    
-
 # Set working directory
 WORKDIR /var/www/html
 
@@ -46,11 +44,12 @@ RUN chown -R www-data:www-data /var/www/html \
 COPY docker/crontab /etc/cron.d/laravel-scheduler
 RUN chmod 0644 /etc/cron.d/laravel-scheduler && crontab /etc/cron.d/laravel-scheduler
 
-# Setup Supervisor
-COPY supervisord.conf /etc/supervisord.conf
+# Copy and set start script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-# Expose ports
+# Expose PHP-FPM port for Caddy
 EXPOSE 9000
 
-# Start supervisor using the correct config path
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+# Start all Laravel services
+CMD ["/start.sh"]
