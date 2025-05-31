@@ -12,6 +12,7 @@ php artisan route:clear
 
 
 
+
 redis-cli
 SUBSCRIBE ticks
 

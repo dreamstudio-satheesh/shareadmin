@@ -128,8 +128,8 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - ./backend:/var/www/html
-      - home/git/caddy_data:/data
-      - home/git/caddy_config:/config
+      - caddy_data:/data
+      - caddy_config:/config
     networks:
       - web
 
