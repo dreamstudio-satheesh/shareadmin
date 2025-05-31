@@ -84,7 +84,6 @@ services:
     networks:
       - web
 
-
   monitor_orders:
     container_name: monitor_orders
     build:
@@ -138,12 +137,13 @@ services:
     networks:
       - web
       
+
 volumes:
   mysql_data:
   redis_data:
-  # caddy_data:
-  # caddy_config:
-  
+  caddy_data:
+  caddy_config:
+
 networks:
   web:
     driver: bridge
