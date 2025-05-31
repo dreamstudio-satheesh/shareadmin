@@ -36,7 +36,6 @@ COPY . .
 RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader \
     && composer dump-autoload --optimize
 
-
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
 RUN chmod 0644 /etc/cron.d/laravel-scheduler && crontab /etc/cron.d/laravel-scheduler
