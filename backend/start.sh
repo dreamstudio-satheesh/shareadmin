@@ -1,31 +1,31 @@
 #!/bin/bash
-
-# Exit on error
 set -e
 
-# Ensure Laravel caches are fresh
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-
-# Fix permissions (optional, safe fallback)
+# Fix permissions (for development convenience)
 chown -R www-data:www-data /var/www/html
 chmod -R 775 storage bootstrap/cache
 
-# Ensure PHP-FPM listens on 0.0.0.0:9000
+# Ensure Laravel caches are clear in development
+php artisan config:clear
+php artisan route:clear
+php artisan view:clear
+
+# Make sure PHP-FPM listens on all interfaces
 sed -i 's|^listen = .*|listen = 0.0.0.0:9000|' /usr/local/etc/php-fpm.d/www.conf
 
-# Start PHP-FPM in background
-php-fpm -D
+# Start PHP-FPM (in foreground for container)
+exec php-fpm
 
 # Start queue worker
-php artisan queue:work --tries=3 &
-
-# Start ticks broadcaster
-php artisan ticks:broadcast &
+ php artisan queue:work --tries=3 &
 
 # Start Reverb WebSocket (blocking)
-php artisan reverb:start
+ php artisan reverb:start --debug &
+
+# Start ticks broadcasting
+php artisan ticks:broadcast &
+
+
 
 # Wait for all background jobs
 wait

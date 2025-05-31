@@ -1,2 +1,8 @@
 docker compose down --volumes --remove-orphans && docker system prune -af --volumes
 docker rm -f $(docker ps -aq)
+
+
+
+redis-cli
+SUBSCRIBE ticks
+
