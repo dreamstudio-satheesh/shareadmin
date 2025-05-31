@@ -2,6 +2,13 @@ docker compose down --volumes --remove-orphans && docker system prune -af --volu
 docker rm -f $(docker ps -aq)
 
 
+docker exec -it backend php artisan reverb:start
+docker exec -it backend bash
+
+
+php artisan config:clear
+php artisan cache:clear
+php artisan route:clear
 
 
 
