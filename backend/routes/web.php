@@ -2,7 +2,6 @@
 
 use Carbon\Carbon;
 use App\Models\ZerodhaAccount;
-use Laravel\Telescope\Telescope;
 use App\Services\ZerodhaApiService;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
@@ -24,9 +23,7 @@ Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 
 Route::post('zerodha_accounts/{zerodha_account}/update-token', [ZerodhaAccountController::class, 'updateToken'])->name('zerodha_accounts.update_token');
 
-Route::middleware(['web', 'admin.auth', 'can:viewTelescope'])->group(function () {
-    Telescope::routes();
-});
+
 
 Route::middleware('admin.auth')->group(function () {
     Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
