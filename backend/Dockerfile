@@ -57,4 +57,4 @@ RUN chmod +x /start.sh
 EXPOSE 9000
 
 # Start all Laravel services
-# CMD ["/start.sh"]
+CMD ["/start.sh"]
