@@ -2,7 +2,7 @@ docker compose down --volumes --remove-orphans && docker system prune -af --volu
 docker rm -f $(docker ps -aq)
 
 
-docker ps
+
 
 
 redis-cli
