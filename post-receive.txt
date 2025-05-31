@@ -13,12 +13,12 @@ git --git-dir="$REPO_DIR" archive master | tar -x -C "$EXPORT_TMP"
 # 2. Sync exported code to the deploy directory, EXCLUDING important files/folders
 rsync -a --delete \
   --exclude='.env' \
-  --exclude='storage/' \
+  --exclude='.gitignore' \
   --exclude='/backend/public/assets/' \
   "$EXPORT_TMP"/ "$EXPORT_DIR"/
 
 # 3. (Optional) Set permissions for web server (adjust user/group as needed)
-chown -R git:www-data "$EXPORT_DIR"
+# chown -R git:www-data "$EXPORT_DIR"
 
 # 4. (Optional) Cleanup temp export
 rm -rf "$EXPORT_TMP"
