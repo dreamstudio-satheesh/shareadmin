@@ -23,6 +23,8 @@ RUN apt-get update && apt-get install -y \
     && pecl install redis && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+USER www-data
+
 # Set working directory
 WORKDIR /var/www/html
 
@@ -35,6 +37,8 @@ COPY . .
 # Install PHP dependencies
 RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader \
     && composer dump-autoload --optimize
+
+USER root
 
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
