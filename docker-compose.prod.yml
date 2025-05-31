@@ -44,7 +44,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - /home/git/mysql_data:/var/lib/mysql
     env_file: .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -61,7 +61,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - ./redis_data:/data
+      - /home/git/redis_data:/data
     networks:
       - web
 
@@ -128,8 +128,8 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - ./backend:/var/www/html
-      - caddy_data:/data
-      - caddy_config:/config
+      - home/git/caddy_data:/data
+      - home/git/caddy_config:/config
     networks:
       - web
 

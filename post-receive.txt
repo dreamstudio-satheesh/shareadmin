@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+
+REPO_DIR="/home/git/shareadmin.git"
+EXPORT_DIR="/home/git/kiteapp"
+EXPORT_TMP="/tmp/kiteapp_export"
+
+# 1. Export only tracked files to a temp folder
+rm -rf "$EXPORT_TMP"
+mkdir -p "$EXPORT_TMP"
+git --git-dir="$REPO_DIR" archive master | tar -x -C "$EXPORT_TMP"
+
+# 2. Sync exported code to the deploy directory, EXCLUDING important files/folders
+rsync -a --delete \
+  --exclude='.env' \
+  --exclude='storage/' \
+  --exclude='/backend/public/assets/' \
+  "$EXPORT_TMP"/ "$EXPORT_DIR"/
+
+# 3. (Optional) Set permissions for web server (adjust user/group as needed)
+chown -R git:www-data "$EXPORT_DIR"
+
+# 4. (Optional) Cleanup temp export
+rm -rf "$EXPORT_TMP"
+
+# 5. (Optional) Run post-deploy tasks
+# cd "$EXPORT_DIR"
+# composer install --no-dev --optimize-autoloader
+# php artisan migrate --force
+# php artisan config:cache
+# php artisan route:cache
+# php artisan view:cache
