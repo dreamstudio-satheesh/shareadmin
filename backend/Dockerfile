@@ -23,8 +23,6 @@ RUN apt-get update && apt-get install -y \
     && pecl install redis && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-
-
 # Set working directory
 WORKDIR /var/www/html
 
@@ -34,16 +32,19 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy application files
 COPY . .
 
+# Set strict permissions for all files
+RUN find /var/www/html -type f -exec chmod 644 {} \; \
+    && find /var/www/html -type d -exec chmod 755 {} \; \
+    && chown -R root:root /var/www/html
+
+# Allow write for storage and cache
 RUN mkdir -p /var/www/html/storage /var/www/html/bootstrap/cache \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-
 # Install PHP dependencies
 RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader \
     && composer dump-autoload --optimize
-
-
 
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
@@ -55,6 +56,9 @@ RUN chmod +x /start.sh
 
 # Expose PHP-FPM port for Caddy
 EXPOSE 9000
+
+# Drop privileges to www-data (never run as root)
+USER www-data
 
 # Start all Laravel services
 CMD ["/start.sh"]

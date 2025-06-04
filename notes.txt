@@ -1,6 +1,13 @@
 docker compose down --volumes --remove-orphans && docker system prune -af --volumes
 docker rm -f $(docker ps -aq)
 
+docker compose down --volumes --remove-orphans
+docker volume prune -f
+docker system prune -af --volumes
+docker compose build --no-cache
+docker compose up -d
+
+
 
 docker exec -it backend php artisan reverb:start
 docker exec -it backend bash
@@ -15,3 +22,36 @@ php artisan route:clear
 redis-cli
 SUBSCRIBE ticks
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+docker compose stop mysql
+docker compose rm -f mysql
+docker volume rm $(docker volume ls -q | grep mysql)
+docker image rm $(docker images | grep mysql | awk '{print $3}')
+docker compose build --no-cache mysql
+docker compose up -d mysql
