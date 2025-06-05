@@ -15,6 +15,7 @@
         // Connect to Reverb WebSocket
         const echo = new Echo.default({
             broadcaster: 'reverb',
+            key: 'pnxogxkyluuvpe7i4mhn',
             wsHost: window.location.hostname,
             wsPort: 6001,
             wssPort: 6001,
