@@ -104,5 +104,12 @@ Route::view('/live-ticks', 'live-ticks');
 
 
 Route::get('/broadcast-test', function () {
-    return view('broadcast-test');
+    broadcast(new \App\Events\TickUpdate([
+        'symbol' => 'NSE:INFY',
+        'lp' => rand(1000, 1500),
+        'ts' => now()->timestamp,
+    ]))->toOthers();
+
+    return '📢 TickUpdate event broadcasted!';
 });
+
