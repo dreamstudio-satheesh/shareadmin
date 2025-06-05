@@ -12,8 +12,6 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     cron \
-    nodejs \
-    npm \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
