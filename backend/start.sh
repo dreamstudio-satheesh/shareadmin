@@ -2,8 +2,8 @@
 set -e
 
 # Fix permissions (for development convenience)
-chown -R www-data:www-data /var/www/html
-chmod -R 775 storage bootstrap/cache
+# chown -R www-data:www-data /var/www/html
+# chmod -R 775 storage bootstrap/cache
 
 # Ensure Laravel caches are clear in development
 php artisan config:clear
