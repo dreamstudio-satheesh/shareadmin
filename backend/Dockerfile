@@ -66,4 +66,4 @@ EXPOSE 9000
 USER www-data
 
 # Start all Laravel services
-CMD ["/start.sh"]
+# CMD ["/start.sh"]
