@@ -8,11 +8,11 @@ use Illuminate\Support\Facades\Http;
 
 class ZerodhaApiService
 {
-    protected string $apiKey;
-    protected string $apiSecret;
+    protected ?string $apiKey;
+    protected ?string $apiSecret;
     protected ?string $accessToken;
 
-    public function __construct(string $apiKey, string $apiSecret, ?string $accessToken = null)
+    public function __construct(?string $apiKey = null, ?string $apiSecret = null, ?string $accessToken = null)
     {
         $this->apiKey = $apiKey;
         $this->apiSecret = $apiSecret;
@@ -22,6 +22,20 @@ class ZerodhaApiService
     public function getLoginUrl(): string
     {
         return "https://kite.zerodha.com/connect/login?v=3&api_key={$this->apiKey}";
+    }
+
+
+    
+    // 🔹 Get instruments data
+    public function getInstrumentsCsv(): string
+    {
+        $response = Http::get('https://api.kite.trade/instruments');
+
+        if ($response->failed()) {
+            throw new \Exception('Failed to fetch instruments CSV: ' . $response->body());
+        }
+
+        return $response->body();
     }
 
     public function generateSession(string $requestToken): string
@@ -141,18 +155,4 @@ class ZerodhaApiService
     }
 
 
-
-
-
-    // 🔹 Get instruments data
-    public function getInstrumentsCsv(): string
-    {
-        $response = $this->request()->get('https://api.kite.trade/instruments');
-
-        if ($response->failed()) {
-            throw new \Exception('Failed to fetch instruments CSV: ' . $response->body());
-        }
-
-        return $response->body();
-    }
 }

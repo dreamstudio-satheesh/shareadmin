@@ -3,8 +3,8 @@
 namespace App\Traits;
 
 use App\Models\Instrument;
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 
 trait TradeHelpers
 {
@@ -80,4 +80,6 @@ trait TradeHelpers
 
         return [$ltp, $source];
     }
+
+
 }

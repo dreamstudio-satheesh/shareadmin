@@ -3,9 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\Instrument;
-use App\Models\ZerodhaAccount;
-use App\Services\ZerodhaApiService;
 use Illuminate\Console\Command;
+use App\Services\ZerodhaApiService;
 
 class ImportInstruments extends Command
 {
@@ -14,15 +13,13 @@ class ImportInstruments extends Command
 
     public function handle(): void
     {
-        $account = ZerodhaAccount::whereNotNull('access_token')->first();
-
-        if (! $account) {
-            $this->error('No Zerodha account with a valid access token found.');
-            return;
-        }
-
-        $service = new ZerodhaApiService($account->api_key, $account->api_secret, $account->access_token);
+        
         $this->info("Fetching instruments from Zerodha API...");
+
+        // service getInstrumentsCsv can i new ZerodhaApiService
+
+        $service = new ZerodhaApiService();
+
 
         try {
             $csvData = $service->getInstrumentsCsv();
