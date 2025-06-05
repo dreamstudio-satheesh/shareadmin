@@ -30,21 +30,26 @@ WORKDIR /var/www/html
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy application files
+# These files will initially be owned by root
 COPY . .
 
-# Set strict permissions for all files
-RUN find /var/www/html -type f -exec chmod 644 {} \; \
-    && find /var/www/html -type d -exec chmod 755 {} \; \
-    && chown -R root:root /var/www/html
-
-# Allow write for storage and cache
-RUN mkdir -p /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
 # Install PHP dependencies
+# This runs as root, so files in vendor/ will be owned by root
 RUN composer install --no-dev --no-scripts --no-interaction --prefer-dist --optimize-autoloader \
     && composer dump-autoload --optimize
+
+# Set up directories and permissions
+# Create storage & cache directories (if not already existing from COPY)
+RUN mkdir -p /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Set ownership for the entire application directory to www-data:www-data
+# This MUST be done as root, before switching to USER www-data.
+# This will cover all copied files (like public/assets) and composer-generated files (like vendor/).
+RUN chown -R www-data:www-data /var/www/html
+
+# Set specific writable permissions for storage and cache for Laravel
+# www-data needs to write here, and the group often needs write access too.
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Setup cron
 COPY docker/crontab /etc/cron.d/laravel-scheduler
@@ -57,7 +62,7 @@ RUN chmod +x /start.sh
 # Expose PHP-FPM port for Caddy
 EXPOSE 9000
 
-# Drop privileges to www-data (never run as root)
+# Drop privileges to www-data (never run as root for the application)
 USER www-data
 
 # Start all Laravel services
