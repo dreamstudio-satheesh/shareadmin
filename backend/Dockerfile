@@ -33,9 +33,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # Set strict permissions for all files
-RUN find /var/www/html -type f -exec chmod 644 {} \; \
-    && find /var/www/html -type d -exec chmod 755 {} \; \
-    && chown -R root:root /var/www/html
+# RUN find /var/www/html -type f -exec chmod 644 {} \; \
+#     && find /var/www/html -type d -exec chmod 755 {} \; \
+#     && chown -R root:root /var/www/html
 
 # Allow write for storage and cache
 RUN mkdir -p /var/www/html/storage /var/www/html/bootstrap/cache \
