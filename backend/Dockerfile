@@ -63,7 +63,7 @@ RUN chmod +x /start.sh
 EXPOSE 9000
 
 # Drop privileges to www-data (never run as root for the application)
-# USER www-data
+USER www-data
 
 # Start all Laravel services
-# CMD ["/start.sh"]
+CMD ["/start.sh"]
