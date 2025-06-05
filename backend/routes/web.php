@@ -98,6 +98,9 @@ Route::get('/ticks', function () {
 });
 
 
+Route::view('/live-ticks', 'live-ticks');
+
+
 
 
 Route::get('/broadcast-test', function () {
