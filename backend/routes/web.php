@@ -108,7 +108,7 @@ Route::get('/broadcast-test', function () {
         'symbol' => 'NSE:INFY',
         'lp' => rand(1000, 1500),
         'ts' => now()->timestamp,
-    ]));
+    ]);
 
     return '📢 TickUpdate event broadcasted!';
 });
