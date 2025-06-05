@@ -26,6 +26,16 @@ SUBSCRIBE ticks
 
 
 
+# Get into the container
+docker exec -it backend bash
+
+# Inside container
+apt-get update
+apt-get install -y curl gnupg
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+apt-get install -y nodejs
+npm install
+npm run build
 
 
 
