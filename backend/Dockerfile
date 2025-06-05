@@ -45,7 +45,7 @@ RUN mkdir -p /var/www/html/storage /var/www/html/bootstrap/cache
 # Set ownership for the entire application directory to www-data:www-data
 # This MUST be done as root, before switching to USER www-data.
 # This will cover all copied files (like public/assets) and composer-generated files (like vendor/).
-RUN chown -R www-data:www-data /var/www/html
+# RUN chown -R www-data:www-data /var/www/html
 
 # Set specific writable permissions for storage and cache for Laravel
 # www-data needs to write here, and the group often needs write access too.
