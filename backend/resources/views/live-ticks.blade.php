@@ -13,7 +13,7 @@
 
     <script>
         // Connect to Reverb WebSocket
-        const echo = new Echo.default({
+        const echo = new Echo({
             broadcaster: 'reverb',
             key: 'pnxogxkyluuvpe7i4mhn',
             wsHost: window.location.hostname,
