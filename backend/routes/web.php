@@ -67,10 +67,6 @@ Route::get('/redis-test', function () {
     return \Illuminate\Support\Facades\Redis::keys('tick:*');
 });
 
-
-
-
-
 Route::get('/ticks', function () {
     $keys = Redis::keys('tick:*');
     $ticks = [];
@@ -97,19 +93,9 @@ Route::get('/ticks', function () {
     return response()->json($ticks);
 });
 
-
 Route::view('/live-ticks', 'live-ticks');
 
 
 
 
-Route::get('/broadcast-test', function () {
-    broadcast(new \App\Events\TickUpdate([
-        'symbol' => 'NSE:INFY',
-        'lp' => rand(1000, 1500),
-        'ts' => now()->timestamp,
-    ]));
-
-    return '📢 TickUpdate event broadcasted!';
-});
 
