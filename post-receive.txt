@@ -1,30 +1,40 @@
 #!/bin/bash
 set -e
 
-REPO_DIR="/home/git/shareadmin.git"
-EXPORT_DIR="/home/git/kiteapp"
-EXPORT_TMP="/tmp/kiteapp_export"
+GIT_DIR="/home/shareadmin.git"
+WORK_TREE="/home/kiteapp"
 
-# 1. Export only tracked files to a temp folder
-rm -rf "$EXPORT_TMP"
-mkdir -p "$EXPORT_TMP"
-git --git-dir="$REPO_DIR" archive master | tar -x -C "$EXPORT_TMP"
+echo "📦 Deploying Laravel backend to $WORK_TREE..."
 
-# 2. Sync exported code to the deploy directory, EXCLUDING important files/folders
-rsync -a --delete \
-  --exclude='.env' \
-  --exclude='.gitignore' \
-  --exclude='/backend/public/assets/' \
-  "$EXPORT_TMP"/ "$EXPORT_DIR"/
+# Ensure target folder exists
+mkdir -p "$WORK_TREE"
 
-# 3. (Optional) Set permissions for web server (adjust user/group as needed)
-# chown -R git:www-data "$EXPORT_DIR"
+# Checkout latest code
+GIT_WORK_TREE="$WORK_TREE" GIT_DIR="$GIT_DIR" git checkout -f master
 
-# 4. (Optional) Cleanup temp export
-rm -rf "$EXPORT_TMP"
+# Laravel backend path
+cd "$WORK_TREE/backend"
 
-# 5. (Optional) Run post-deploy tasks
-# cd "$EXPORT_DIR"
+echo "📂 Running Laravel post-deploy steps..."
+
+# Install Composer deps
+composer install --no-dev --optimize-autoloader
+
+# Set permissions
+chown -R www-data:www-data .
+chmod -R 775 storage bootstrap/cache
+
+# Laravel optimize commands
+php artisan config:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+echo "✅ Deployment complete."
+
+
+
+
 # composer install --no-dev --optimize-autoloader
 # php artisan migrate --force
 # php artisan config:cache
