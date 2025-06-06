@@ -1,3 +1,4 @@
+
 services:
   backend:
     container_name: backend
@@ -118,18 +119,19 @@ services:
       timeout: 5s
       retries: 3
 
-  webserver:
-    container_name: webserver
-    image: caddy:2
+  nginx:
+    container_name: nginx
+    image: nginx:stable
     restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
+      - "443:443" # Only if you're using SSL
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./nginx/prod.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl:ro  # Only needed if using SSL manually
       - ./backend:/var/www/html
-      - caddy_data:/data
-      - caddy_config:/config
+    depends_on:
+      - backend
     networks:
       - web
 
@@ -138,18 +140,16 @@ services:
     image: portainer/portainer-ce:latest
     restart: unless-stopped
     ports:
-      - "9001:9000"   # Change host port if you want, 9001:9000 avoids clash with backend
+      - "9001:9000"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock    # Required for Docker management
-      - portainer_data:/data                        # Persistent data for Portainer UI
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
     networks:
       - web
 
 volumes:
   mysql_data:
   redis_data:
-  caddy_data:
-  caddy_config:
   portainer_data:
 
 networks:
