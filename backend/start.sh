@@ -16,13 +16,13 @@ echo "Starting background Laravel processes..."
 php /var/www/html/artisan queue:work --tries=3 --timeout=3600 &
 QUEUE_PID=$! # Store PID to potentially kill later
 
-# # Start Reverb WebSocket in the background
-# php /var/www/html/artisan reverb:start --host=0.0.0.0 --port=8080 --debug &
-# REVERB_PID=$! # Store PID
+# Start Reverb WebSocket in the background
+php /var/www/html/artisan reverb:start --host=0.0.0.0 --port=8080 --debug &
+REVERB_PID=$! # Store PID
 
-# # Start ticks broadcasting in the background
-# php /var/www/html/artisan ticks:broadcast &
-# TICKS_PID=$! # Store PID
+# Start ticks broadcasting in the background
+php /var/www/html/artisan ticks:broadcast &
+TICKS_PID=$! # Store PID
 
 # Trap signals to gracefully stop background processes when the container stops
 trap "echo 'Stopping background processes...'; kill -TERM $QUEUE_PID $REVERB_PID $TICKS_PID; wait; echo 'All background processes stopped.'" SIGTERM SIGINT

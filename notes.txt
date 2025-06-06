@@ -22,7 +22,7 @@ php artisan route:clear
 redis-cli
 SUBSCRIBE ticks
 
-
+docker exec -it backend php artisan reverb:start
 
 
 
