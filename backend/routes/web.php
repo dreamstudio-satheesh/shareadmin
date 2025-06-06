@@ -98,4 +98,14 @@ Route::view('/live-ticks', 'live-ticks');
 
 
 
+Route::get('/broadcast-test', function () {
+    broadcast(new TickUpdate([
+        'token' => '123456',
+        'symbol' => 'NSE:TCS',
+        'lp' => '1234.56',
+        'ts' => now()->timestamp,
+        'market_open' => 'true'
+    ]));
 
+    return '✔ Tick broadcasted';
+});

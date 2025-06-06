@@ -121,7 +121,7 @@
 
             window.Echo.channel('ticks')
                 .listen('.TickUpdate', (e) => {
-                    //  console.log('📡 Tick received:', e);
+                     console.log('📡 Tick received:', e);
                     let tick;
                     try {
                         tick = e?.tick ?? (typeof e?.data === 'string' ? JSON.parse(e.data).tick : e.data?.tick);
