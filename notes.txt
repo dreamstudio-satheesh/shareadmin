@@ -9,8 +9,7 @@ docker compose up -d
 
 
 
-docker exec -it backend php artisan reverb:start
-docker exec -it backend bash
+docker exec -it ticker bash
 
 
 php artisan config:clear
