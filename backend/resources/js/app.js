@@ -16,5 +16,7 @@ window.Echo = new Echo({
     enabledTransports: ['ws'],
 });
 
+
+
 // enabledTransports: ['ws', 'wss'],
 
